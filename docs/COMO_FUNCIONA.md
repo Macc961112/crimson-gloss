@@ -189,7 +189,16 @@ El **mundo** se dibuja con capas: cielo (degradado, sol o estrellas), nubes que 
 
 **Límites:** son ilustraciones de emojis (consistentes pero no personalizadas); un animal que no esté en el léxico no aparece hasta que lo añadas; no hay giro de los personajes salvo reflejarlos al moverse.
 
-## 11. Límites generales
+## 11. Orientación vertical y horizontal
+
+El plan lleva `"orientation": "vertical"` (1080×1920, por defecto) u `"horizontal"` (1920×1080). Por dentro:
+- La plantilla Remotion expone el tamaño del lienzo a todos los componentes (`useDims()`); Root lo fija con `calculateMetadata`.
+- **Cuentos:** todo se calcula con porcentajes de la altura y la anchura. El decorado (árboles, edificios…) se **repite a lo ancho** en horizontal; los personajes se escalan por la altura; la página de cuento pasa a dos columnas.
+- **B-roll:** los layouts se diseñaron a 1080 de ancho; en horizontal se escalan y se colocan en la columna derecha, y las líneas de cabecera (la palabra grande) van a la izquierda, centradas. Si no hay cabecera, el visual queda centrado. `rain`, `reaction` e `image` ocupan toda la pantalla.
+- **Normal:** el video se recorta a 1920×1080 y los subtítulos, el rótulo y el CTA se escalan con la altura.
+- **Crimson y personaje:** el texto, las tarjetas y el personaje están pensados para una columna vertical; en horizontal esa columna se **encaja por altura** y el fondo se rellena (video desenfocado o el set del personaje). Es honesto pero no es una recomposición nativa: si necesitas un crimson horizontal "de verdad", grábate en horizontal y pide el modo normal, o usa B-roll y cuentos que sí son nativos.
+
+## 12. Límites generales
 - Probado en Windows con un clip limpio en español, no con un video real filmado.
 - No detecta repeticiones/tomas falsas: solo corta **silencios**.
 - La transcripción local se equivoca con nombres propios; hay que corregirlos.

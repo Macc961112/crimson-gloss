@@ -2,7 +2,7 @@
 // Se elige con `layout` en la escena: phone, stat, chart, steps, checklist, compare, quote, chat, browser,
 // terminal, grid, meter, rain, notifs, rating, image, clip.
 import { AbsoluteFill, Easing, Img, OffthreadVideo, interpolate, staticFile } from 'remotion';
-import { Gloss, Small, useT, prog, R, fit, F, glossFill, TH, stickerOutline, clamp, FPS } from './Cg';
+import { Gloss, Small, useT, prog, R, fit, F, glossFill, TH, stickerOutline, clamp, FPS, Dims, useDims } from './Cg';
 import { STORY_LAYOUTS, FULL_LAYOUTS } from './Story';
 import { GENERAL_LAYOUTS } from './General';
 
@@ -288,14 +288,14 @@ const Meter = ({ sc, s }) => {
 
 // --- rain: lluvia de emojis ---------------------------------------------------------------------------------------------
 const Rain = ({ sc, s }) => {
-  const t = useT(), r = sc.rain || {}, e = r.emoji || '💰', n = r.count ?? 34, lt = Math.max(0, t - s);
+  const t = useT(), r = sc.rain || {}, e = r.emoji || '💰', n = r.count ?? 34, lt = Math.max(0, t - s), { W, H } = useDims(), Hs = H / 1920, fs = Math.max(0.6, Hs * 1.2);
   return (
     <AbsoluteFill style={{ overflow: 'hidden' }}>
       {Array.from({ length: n }, (_, i) => {
-        const sp = R(i + 7, 380, 760), size = R(i + 31, 90, 190), y = ((lt * sp + R(i + 51, 0, 2400)) % 2500) - 250;
-        return <div key={i} style={{ position: 'absolute', left: R(i, -20, 980), top: y, fontSize: size, transform: `rotate(${lt * R(i + 3, -120, 120) + R(i + 9, 0, 360)}deg)`, opacity: 0.9, filter: `blur(${size > 160 ? 2 : 0}px)` }}>{e}</div>;
+        const sp = R(i + 7, 380, 760) * Hs, size = R(i + 31, 90, 190) * fs, y = ((lt * sp + R(i + 51, 0, H * 1.25)) % (H * 1.3)) - H * 0.13;
+        return <div key={i} style={{ position: 'absolute', left: R(i, -20, W - 100), top: y, fontSize: size, transform: `rotate(${lt * R(i + 3, -120, 120) + R(i + 9, 0, 360)}deg)`, opacity: 0.9, filter: `blur(${size > 160 ? 2 : 0}px)` }}>{e}</div>;
       })}
-      {r.center && <Body><div style={{ fontSize: 520, filter: 'drop-shadow(0 30px 30px #0004)', transform: `scale(${pop(t, s + 0.3)})` }}>{r.center}</div></Body>}
+      {r.center && <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: H * 0.27, filter: 'drop-shadow(0 30px 30px #0004)', transform: `scale(${pop(t, s + 0.3)})` }}>{r.center}</div>}
     </AbsoluteFill>
   );
 };
@@ -354,7 +354,48 @@ const CORE = { phone: Phone, stat: Stat, chart: Chart, steps: Steps, checklist: 
 export const LAYOUTS = { ...CORE, ...GENERAL_LAYOUTS, ...STORY_LAYOUTS };
 export const isFull = (sc) => FULL_LAYOUTS.includes(sc.layout) || sc.layout === 'image';
 
+const HeaderLand = ({ sc, w }) => {
+  const lines = sc.lines || [];
+  if (!lines.length) return null;
+  return (
+    <div style={{ position: 'absolute', left: 60, top: 0, bottom: 0, width: w, display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', gap: 16 }}>
+      {lines.map((l, i) => l.gloss
+        ? <Gloss key={i} text={l.gloss} at={l.at} until={sc.to - 0.2} size={fit(l.gloss, w, 300)} bright={isDark(sc)} />
+        : <Small key={i} at={l.at} until={sc.to - 0.2} size={Math.max(50, (l.size ?? 56) * 1.1)} white={isDark(sc)}>{l.small}</Small>)}
+    </div>
+  );
+};
+
+// phone en horizontal: objeto grande a la derecha, texto a la izquierda
+const PhoneLand = ({ sc, s, colW }) => {
+  const t = useT(), { W, H } = useDims(), p = prog(t, s, s + 0.4), obj = sc.object || {}, bob = Math.sin(t * 2.2) * 12;
+  return (
+    <>
+      <HeaderLand sc={sc} w={colW - 120} />
+      <div style={{ position: 'absolute', left: colW, width: colW, top: 0, bottom: 0, display: 'grid', placeItems: 'center', transform: `translateY(${(1 - p) * 300 + bob}px) scale(${0.9 + p * 0.1})`, filter: 'drop-shadow(0 30px 30px #0003)' }}>
+        {obj.image ? <Img src={staticFile(obj.image)} style={{ height: H * 0.78, objectFit: 'contain' }} /> : <div style={{ fontSize: H * 0.62, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
+      </div>
+      {(sc.stickers || []).map((e, i) => <div key={i} style={{ position: 'absolute', left: colW + [0.06, 0.78, 0.1, 0.8][i % 4] * colW, top: [0.62, 0.12, 0.08, 0.66][i % 4] * H, fontSize: H * 0.14, textShadow: stickerOutline, transform: `translate(${Math.sin(t * 2 + i) * 10}px, ${Math.cos(t * 2.4 + i) * 12}px) rotate(${-8 + i * 9 + Math.sin(t * 3) * 4}deg)`, opacity: p }}>{e}</div>)}
+    </>
+  );
+};
+
 export const BrollBody = ({ sc, s }) => {
-  const L = LAYOUTS[sc.layout || 'phone'] || Phone;
-  return <>{(sc.layout || 'phone') !== 'phone' && <L sc={sc} s={s} />}{(sc.layout || 'phone') === 'phone' && <L sc={sc} s={s} />}{(sc.layout || 'phone') !== 'phone' && <Header sc={sc} />}</>;
+  const { W, H } = useDims(), land = W > H, lay = sc.layout || 'phone', L = LAYOUTS[lay] || Phone;
+  const full = FULL_LAYOUTS.includes(lay) || ['image', 'rain', 'reaction'].includes(lay);
+  if (!land || full) return <><L sc={sc} s={s} />{lay !== 'phone' && !FULL_LAYOUTS.includes(lay) && <Header sc={sc} />}</>;
+  // Horizontal: el texto grande a la izquierda y el visual (diseñado en una columna de ~920 px) a la derecha
+  const colW = W * 0.5;
+  if (lay === 'phone') return <PhoneLand sc={sc} s={s} colW={colW} />;
+  const hasHead = (sc.lines || []).length > 0;
+  const k = Math.min(((hasHead ? colW : W) - 40) / 940, (H - 60) / 1060);
+  const cx = hasHead ? colW * 1.5 : W / 2;
+  return (
+    <>
+      {hasHead && <HeaderLand sc={sc} w={colW - 120} />}
+      <div style={{ position: 'absolute', left: cx - 540 * k, top: (H - 1060 * k) / 2 - 620 * k, width: 1080, height: 1920, transformOrigin: '0 0', transform: `scale(${k})` }}>
+        <Dims.Provider value={{ W: 1080, H: 1920 }}><L sc={sc} s={s} /></Dims.Provider>
+      </div>
+    </>
+  );
 };

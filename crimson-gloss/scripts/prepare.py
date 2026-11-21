@@ -113,6 +113,7 @@ def main():
     ap.add_argument('--matte', default='auto'); ap.add_argument('--lang'); ap.add_argument('--model', default='small')
     ap.add_argument('--no-music', action='store_true')
     ap.add_argument('--mode', choices=['crimson', 'normal'], default='crimson')
+    ap.add_argument('--orientation', choices=['auto', 'vertical', 'horizontal'], default='auto', help='vertical 1080x1920 / horizontal 1920x1080 (auto: según el video)')
     ap.add_argument('--no-trim', action='store_true', help='modo normal: no cortar silencios')
     ap.add_argument('--gap', type=float, default=0.45, help='silencio mínimo (s) que se corta')
     a = ap.parse_args()
@@ -120,9 +121,11 @@ def main():
     p = lambda n: os.path.join(out, n)
 
     dur, W, H, has_audio = probe(a.video)
-    if abs(W / H - 9 / 16) > 0.02:
-        print(f'[crimson] aviso: el video es {W}x{H}, no 9:16. Se recorta al centro; mejor graba en vertical.')
-    run(['ffmpeg', '-v', 'error', '-y', '-i', a.video, '-vf', 'scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30,format=yuv420p',
+    ori = a.orientation if a.orientation != 'auto' else ('horizontal' if W / H > 1.2 else 'vertical')
+    OW, OH = (1920, 1080) if ori == 'horizontal' else (1080, 1920)
+    if abs(W / H - OW / OH) > 0.02:
+        print(f'[crimson] aviso: el video es {W}x{H}, no {OW}:{OH}. Se recorta al centro; mejor graba en {ori}.')
+    run(['ffmpeg', '-v', 'error', '-y', '-i', a.video, '-vf', f'scale={OW}:{OH}:force_original_aspect_ratio=increase,crop={OW}:{OH},fps=30,format=yuv420p',
          '-c:v', 'libx264', '-crf', '16', '-preset', 'fast', '-c:a', 'aac', '-ar', '48000', '-b:a', '192k', '-movflags', '+faststart', p('input.mp4')])
     print('[crimson] input.mp4 listo')
 
@@ -168,9 +171,9 @@ def main():
         print('[crimson] music.wav listo')
 
     run(['ffmpeg', '-v', 'error', '-y', '-ss', '1', '-i', p('input.mp4'), '-frames:v', '1', '-vf', 'scale=540:-1', p('frame.jpg')])
-    run(['ffmpeg', '-v', 'error', '-y', '-i', p('input.mp4'), '-vf', f'fps=12/{dur:.2f},scale=216:384,tile=6x2:padding=3', '-frames:v', '1', p('sheet.jpg')])
+    run(['ffmpeg', '-v', 'error', '-y', '-i', p('input.mp4'), '-vf', f'fps=12/{dur:.2f},scale={216 if ori == "vertical" else 384}:{384 if ori == "vertical" else 216},tile={6 if ori == "vertical" else 4}x{2 if ori == "vertical" else 3}:padding=3', '-frames:v', '1', p('sheet.jpg')])
     hx = lambda c: '#%02x%02x%02x' % c
-    json.dump({'mode': a.mode, 'original_duration': round(orig_dur, 2), 'trimmed': round(trimmed, 2), 'cuts': ncuts, 'language': tr['language'], 'duration': round(dur, 2), 'matte': matte, 'corner': [r, g, b], 'bg': [hx((r, g, b)), hx(corner_color(p('input.mp4'), 1860))], 'words': len(tr['words'])}, open(p('prepare.json'), 'w'), indent=1)
+    json.dump({'orientation': ori, 'mode': a.mode, 'original_duration': round(orig_dur, 2), 'trimmed': round(trimmed, 2), 'cuts': ncuts, 'language': tr['language'], 'duration': round(dur, 2), 'matte': matte, 'corner': [r, g, b], 'bg': [hx((r, g, b)), hx(corner_color(p('input.mp4'), OH - 60))], 'words': len(tr['words'])}, open(p('prepare.json'), 'w'), indent=1)
     print(f'[crimson] listo en {out}. Siguiente: mira frame.jpg y transcript.json, y escribe plan.json (ver SKILL.md).')
 
 if __name__ == '__main__':

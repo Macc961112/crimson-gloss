@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Genera work/plan.json con UNA escena de cada tipo de B-roll (para ver el catálogo completo o copiar la forma de cada layout).
-   python catalog_plan.py WORK
+   python catalog_plan.py WORK [vertical|horizontal]
 Opcional: WORK/assets/catalog_image.png (layout image) y WORK/assets/catalog_clip.mp4 (layout clip)."""
 import json, os, sys
 
@@ -42,5 +42,6 @@ for sp in specs:
     sc['lines'] = [{**l, 'at': round(t + 0.12 + l['at'], 2)} for l in sp['_lines']]
     scenes.append(sc); t += D
 plan = {'mode': 'personaje', 'duration': round(t + 0.5, 2), 'fps': 30, 'set': {'kind': 'studio'}, 'music': None, 'character': {'cfg': {'beard': 'full', 'glasses': True}, 'words': [], 'gestures': []}, 'scenes': scenes}
+plan['orientation'] = sys.argv[2] if len(sys.argv) > 2 else 'vertical'  # vertical | horizontal
 json.dump(plan, open(os.path.join(work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(specs), 'layouts,', plan['duration'], 's')

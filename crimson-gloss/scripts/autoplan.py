@@ -15,13 +15,15 @@ def main():
     ap.add_argument('--cta'); ap.add_argument('--cta-secs', type=float, default=2.6)
     ap.add_argument('--accent', default='#ffd11a'); ap.add_argument('--active-text', default='#111111')
     ap.add_argument('--per', type=int, default=3, help='palabras por línea de subtítulo')
-    ap.add_argument('--y', type=int, default=1330, help='altura de los subtítulos (px sobre 1920)')
-    ap.add_argument('--size', type=int, default=84)
+    ap.add_argument('--y', type=int, default=None, help='altura de los subtítulos en px del lienzo (por defecto, 69 %% de la altura)')
+    ap.add_argument('--size', type=int, default=None)
     ap.add_argument('--fix', help='corrige la transcripción: "Dereo=Video,Core=Code"')
     ap.add_argument('--no-punch', action='store_true'); ap.add_argument('--no-music', action='store_true')
     a = ap.parse_args()
 
     tr = json.load(open(os.path.join(a.work, 'transcript.json'), encoding='utf-8'))
+    pp = os.path.join(a.work, 'prepare.json')
+    orientation = json.load(open(pp, encoding='utf-8')).get('orientation', 'vertical') if os.path.exists(pp) else 'vertical'
     dur, words = tr['duration'], tr['words']
     if not words:
         raise SystemExit('[crimson] no hay palabras en transcript.json (¿el video no tiene voz?)')
@@ -45,15 +47,15 @@ def main():
     plan = {
         'mode': 'normal', 'duration': dur, 'video': 'input.mp4', 'cutout': None,
         'music': 'music.wav' if (not a.no_music and os.path.exists(os.path.join(a.work, 'music.wav'))) else None, 'musicVolume': 0.06,
-        'introFade': False, 'headTop': 780,
+        'introFade': False, 'headTop': 780, 'orientation': orientation,
         'theme': {'accent': a.accent},
-        'captions': {'words': words, 'perLine': a.per, 'y': a.y, 'size': a.size, 'activeText': a.active_text, 'emphasis': emphasis},
+        'captions': {'words': words, 'perLine': a.per, 'activeText': a.active_text, 'emphasis': emphasis, **({'y': a.y} if a.y else {}), **({'size': a.size} if a.size else {})},
         'punches': punches, 'scenes': [],
     }
     if a.name:
-        plan['lower'] = {'name': a.name, 'role': a.role, 'at': 0.5, 'dur': 3.2, 'y': 1080, 'activeText': a.active_text}
+        plan['lower'] = {'name': a.name, 'role': a.role, 'at': 0.5, 'dur': 3.2, 'activeText': a.active_text}
     if a.cta:
-        plan['cta'] = {'text': a.cta, 'at': round(max(0.5, dur - a.cta_secs), 2), 'y': 1640, 'activeText': a.active_text}
+        plan['cta'] = {'text': a.cta, 'at': round(max(0.5, dur - a.cta_secs), 2), 'activeText': a.active_text}
     json.dump(plan, open(os.path.join(a.work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     print(f"[crimson] plan.json (modo normal): {len(words)} palabras, {len(punches)} zooms, énfasis: {', '.join(emphasis) or '-'}")
 

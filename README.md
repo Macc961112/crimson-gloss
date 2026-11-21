@@ -34,6 +34,11 @@ Las escenas a pantalla completa no son una sola plantilla: `phone`, `stat` (núm
 
 ![catalogo](docs/demo-catalogo.gif)
 
+### Vertical y horizontal
+Todo funciona en **9:16** (Reels, TikTok, Shorts) y en **16:9** (YouTube, presentaciones). Los cuentos y el B-roll se recomponen de verdad para pantalla ancha (la ilustración a la izquierda y el texto a la derecha; el visual a la derecha y el titular a la izquierda). ![cuento horizontal](docs/demo-cuento-horizontal.gif)
+
+Elige con `--orientation horizontal` o cambia solo al renderizar: `render.py work --orientation horizontal`.
+
 ## Instalar (1 comando)
 
 **Windows (PowerShell):**

@@ -172,7 +172,11 @@ def ordinal_steps(words):
     steps, end_i = [], starts[-1]
     for n, i in enumerate(starts):
         j = starts[n + 1] if n + 1 < len(starts) else min(len(words), i + 9)
-        body = [x for x in words[i + 1:j]][:5]
+        body = []
+        for x in words[i + 1:j][:8]:  # hasta la primera «y»/coma/punto (mín. 2 palabras), máx. 6
+            if body and len(body) >= 2 and (norm(x['w']) in ('y', 'e', 'and') or re.search(r'[,;.!?]$', body[-1]['w'])): break
+            body.append(x)
+            if len(body) >= 6: break
         text = re.sub(r'[,;:.!?]+$', '', ' '.join(x['w'] for x in body)).strip()
         steps.append({'text': text[:1].upper() + text[1:], 'at': round(words[i]['s'] + 0.1, 2)})
         end_i = j - 1
@@ -257,6 +261,9 @@ def auto_scenes(tr, dur, url=None, broll=True):
         if steps_sc and inside > len(ch) / 2:
             if not steps_done: scenes.append(steps_sc); steps_done = True; last_ins = ci; prev_layout = 'steps'
             continue
+        if steps_sc and inside:  # trozo que solo roza la escena de pasos: se quita lo que ya es de esa escena
+            ch = [w for w in ch if idx[id(w)] not in consumed]
+            if not ch: continue
         ki = keyword_idx(ch, used)
         t0 = ch[0]['s']
         kw = ch[ki] if ki is not None else None
@@ -305,7 +312,9 @@ def auto_scenes(tr, dur, url=None, broll=True):
         if sc['to'] <= sc['from'] + 0.4: sc['to'] = round(sc['from'] + 0.6, 2)
     for i in range(1, len(scenes)):
         if scenes[i]['from'] < scenes[i - 1]['to']: scenes[i - 1]['to'] = scenes[i]['from']
-    return [x for x in scenes if x['to'] > x['from'] + 0.2]
+    for sc in scenes:  # ningún texto puede quedar fuera de su escena
+        if sc.get('elements'): sc['elements'] = [e for e in sc['elements'] if sc['from'] - 0.3 <= e['at'] <= sc['to'] - 0.05]
+    return [x for x in scenes if x['to'] > x['from'] + 0.2 and (x['type'] == 'insert' or x.get('elements'))]
 
 def auto_gestures(words, scenes):
     cand, kinds = [], ['chop', 'open']
@@ -429,15 +438,15 @@ def cmd_plan(a):
         if b.get('character'): cfg = {**b['character'], **cfg}
     if a.story:
         scenes, dur = story_scenes(tr, dur, a.title, a.layout, not a.no_end)
-        plan = {'mode': 'cuento', 'duration': round(dur, 2), 'fps': a.fps, 'voice': 'voice.mp3', 'music': 'music.wav' if os.path.exists(os.path.join(work, 'music.wav')) else None, 'musicVolume': 0.09,
+        plan = {'mode': 'cuento', 'orientation': a.orientation, 'duration': round(dur, 2), 'fps': a.fps, 'voice': 'voice.mp3', 'music': 'music.wav' if os.path.exists(os.path.join(work, 'music.wav')) else None, 'musicVolume': 0.09,
                 'theme': theme, 'speech': speech_spans(tr['words']), 'character': None, 'scenes': scenes}
-        if a.captions: plan['captions'] = {'words': tr['words'], 'perLine': 3, 'y': 1500, 'size': 70, 'activeText': '#ffffff'}
+        if a.captions: plan['captions'] = {'words': tr['words'], 'perLine': 3, 'activeText': '#ffffff'}
         json.dump(plan, open(os.path.join(work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
         print(f"[crimson] plan.json (cuento): {len(scenes)} escenas ({', '.join(sorted({x['layout'] for x in scenes}))}), {round(dur, 1)}s")
         return
     scenes = auto_scenes(tr, dur, a.url, not a.no_broll)
     plan = {
-        'mode': 'personaje', 'duration': dur, 'fps': a.fps, 'voice': 'voice.mp3',
+        'mode': 'personaje', 'orientation': a.orientation, 'duration': dur, 'fps': a.fps, 'voice': 'voice.mp3',
         'music': 'music.wav' if os.path.exists(os.path.join(work, 'music.wav')) else None, 'musicVolume': 0.07,
         'set': {'kind': a.set}, 'theme': theme,
         'character': {'cfg': cfg, 'words': tr['words'], 'gestures': auto_gestures(tr['words'], scenes)},
@@ -460,6 +469,7 @@ def main():
     q.add_argument('--look', default=''); q.add_argument('--character'); q.add_argument('--brand')
     q.add_argument('--set', default='studio', choices=['studio', 'night']); q.add_argument('--cta'); q.add_argument('--captions', action='store_true')
     q.add_argument('--fps', type=int, default=30, choices=[30, 60])
+    q.add_argument('--orientation', default='vertical', choices=['vertical', 'horizontal'], help='vertical 1080x1920 o horizontal 1920x1080')
     q.add_argument('--url', help='enlace que se mostrará en las escenas de navegador')
     q.add_argument('--no-broll', action='store_true', help='sin escenas inserto (solo presentador)')
     q.add_argument('--story', action='store_true', help='cuento infantil: sin presentador, páginas ilustradas con lectura resaltada')

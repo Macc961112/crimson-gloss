@@ -1,7 +1,7 @@
 // B-roll general (a partir de los tipos habituales: pantalla dividida, línea de tiempo, titular, fotos, precio, detalle/resaltado,
 // progreso, cuenta atrás y reacciones).
 import { AbsoluteFill, Easing, Img, interpolate, staticFile } from 'remotion';
-import { Gloss, useT, prog, R, F, glossFill, TH, clamp } from './Cg';
+import { Gloss, useT, prog, R, F, glossFill, TH, clamp, useDims } from './Cg';
 
 const pop = (t, at, d = 0.4) => interpolate(t, [at, at + d], [0, 1], { ...clamp, easing: Easing.out(Easing.back(1.7)) });
 const fade = (t, at, d = 0.3) => interpolate(t, [at, at + d], [0, 1], clamp);
@@ -142,11 +142,11 @@ const Countdown = ({ sc, s }) => {
 };
 
 const Reaction = ({ sc, s }) => {
-  const t = useT(), c = sc.reaction || {}, em = c.emojis || ['❤️', '🔥', '👏', '😍', '🎉'], lt = Math.max(0, t - s);
+  const t = useT(), c = sc.reaction || {}, em = c.emojis || ['❤️', '🔥', '👏', '😍', '🎉'], lt = Math.max(0, t - s), { W, H } = useDims(), Hs = H / 1920, fs = Math.max(0.6, Hs * 1.2);
   return (
     <AbsoluteFill style={{ overflow: 'hidden' }}>
-      {Array.from({ length: 28 }, (_, i) => { const sp = R(i + 4, 260, 520), y = 2000 - ((lt * sp + R(i + 9, 0, 2000)) % 2300); return <div key={i} style={{ position: 'absolute', left: R(i, 40, 940) + 50 * Math.sin(lt * 2 + i), top: y, fontSize: R(i + 5, 70, 150), opacity: Math.min(1, y / 300), transform: `rotate(${15 * Math.sin(lt * 3 + i)}deg)` }}>{em[i % em.length]}</div>; })}
-      <Body><div style={{ fontSize: 480, transform: `scale(${pop(t, s + 0.2) * (1 + 0.06 * Math.sin(t * 8))})`, filter: 'drop-shadow(0 30px 30px #0004)' }}>{c.center || em[0]}</div></Body>
+      {Array.from({ length: 28 }, (_, i) => { const sp = R(i + 4, 260, 520) * Hs, y = H + 80 - ((lt * sp + R(i + 9, 0, H)) % (H + 380)); return <div key={i} style={{ position: 'absolute', left: R(i, 40, W - 140) + 50 * Math.sin(lt * 2 + i), top: y, fontSize: R(i + 5, 70, 150) * fs, opacity: Math.min(1, y / (300 * Hs)), transform: `rotate(${15 * Math.sin(lt * 3 + i)}deg)` }}>{em[i % em.length]}</div>; })}
+      <div style={{ position: 'absolute', inset: 0, display: 'grid', placeItems: 'center', fontSize: H * 0.25, transform: `scale(${pop(t, s + 0.2) * (1 + 0.06 * Math.sin(t * 8))})`, filter: 'drop-shadow(0 30px 30px #0004)' }}>{c.center || em[0]}</div>
     </AbsoluteFill>
   );
 };

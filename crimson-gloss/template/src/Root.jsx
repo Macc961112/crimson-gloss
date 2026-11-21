@@ -12,6 +12,6 @@ export const Root = () => (
     fps={30}
     durationInFrames={30 * demo.duration}
     defaultProps={{ plan: demo }}
-    calculateMetadata={({ props }) => ({ durationInFrames: Math.ceil(props.plan.duration * (props.plan.fps ?? 30)), fps: props.plan.fps ?? 30 })}
+    calculateMetadata={({ props }) => ({ durationInFrames: Math.ceil(props.plan.duration * (props.plan.fps ?? 30)), fps: props.plan.fps ?? 30, width: props.plan.orientation === 'horizontal' ? 1920 : 1080, height: props.plan.orientation === 'horizontal' ? 1080 : 1920 })}
   />
 );

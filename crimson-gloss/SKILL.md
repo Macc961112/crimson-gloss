@@ -1,6 +1,6 @@
 ---
 name: crimson-gloss
-description: Edita el video de una persona hablando a cámara (vertical 9:16) de forma automática y explicada. Cuatro modos — NORMAL (limpio y rápido - corta silencios, subtítulos palabra a palabra, zooms de énfasis, rótulo con nombre, llamada a la acción, música baja y volumen -14 LUFS), PERSONAJE (sin video - un presentador animado por código con sincronía labial, gestos y cámara, a partir de un guion o una voz) CUENTO (cuentos infantiles ilustrados por código: páginas con lectura resaltada, mundos, personajes animados, moraleja y FIN) y CRIMSON (estilo "Crimson Gloss" - texto rojo cristal 3D al ritmo de la voz, tarjetas y cintas que salen por detrás de la persona, píxeles, halftone y escenas inserto que ilustran lo que se dice). Usar cuando el usuario dé un video suyo o un guion/idea y pida "edítalo", "ponle subtítulos", "quítale los silencios", "hazlo estilo crimson / tipo crimson / crimson gloss", "texto rojo 3D alrededor mío", "edítalo como el reel de nikhilmotion", "hazme un video sobre X con un muñeco / personaje / presentador animado", "video sin cámara", "cuento infantil", "cuento para niños", "video educativo para niños (contar, letras, formas)", o /crimson-gloss.
+description: Edita el video de una persona hablando a cámara (vertical 9:16) de forma automática y explicada. Cuatro modos — NORMAL (limpio y rápido - corta silencios, subtítulos palabra a palabra, zooms de énfasis, rótulo con nombre, llamada a la acción, música baja y volumen -14 LUFS), PERSONAJE (sin video - un presentador animado por código con sincronía labial, gestos y cámara, a partir de un guion o una voz) CUENTO (cuentos infantiles ilustrados por código: páginas con lectura resaltada, mundos, personajes animados, moraleja y FIN) y CRIMSON (estilo "Crimson Gloss" - texto rojo cristal 3D al ritmo de la voz, tarjetas y cintas que salen por detrás de la persona, píxeles, halftone y escenas inserto que ilustran lo que se dice). Funciona en vertical (9:16) y horizontal (16:9). Usar cuando el usuario dé un video suyo o un guion/idea y pida "edítalo", "ponle subtítulos", "quítale los silencios", "hazlo estilo crimson / tipo crimson / crimson gloss", "texto rojo 3D alrededor mío", "edítalo como el reel de nikhilmotion", "hazme un video sobre X con un muñeco / personaje / presentador animado", "video sin cámara", "cuento infantil", "cuento para niños", "video educativo para niños (contar, letras, formas)", o /crimson-gloss.
 ---
 
 # Crimson Gloss (modo normal + modo crimson + modo personaje)
@@ -134,6 +134,24 @@ python "SKILL_DIR/scripts/render.py" work --out cuento.mp4 --format both
 - **`plan --story`** hace solo: portada («Había una vez…» + título) que cubre la primera frase; una escena por frase (alterna **página de cuento** con lectura resaltada y **ilustración a pantalla completa**); **mundo** según el lugar (bosque, selva, mar, playa, castillo, espacio, granja, desierto, ciudad, nieve, noche, dulces); **personajes** según los animales/personas nombrados (oso, conejo, zorro, hada, dragón, sirena, unicornio…, ~80); **movimiento** según el verbo (camina → anda, vuela → vuela, nada → nada, salta → rebota, baila/canta → se mece, duerme → flota); **diálogos entre comillas** → globo de texto; «magia/varita/hechizo» → escena `magic`; «Moraleja: …» → `moral`; y **FIN**.
 - **Revisa y mejora `plan.json`**: ¿el mundo y los personajes encajan?, ¿falta un personaje (el emoji sale del léxico `lexicon.py`; si un animal no está, añade el actor a mano `{ "emoji":"🦔","x":0.3,"y":0.74,"size":320,"move":"sway","at":T }`)?, ¿conviene una escena `counting`, `letter`, `shapes` o `journey` en medio? Los actores usan **el mismo emoji para el mismo personaje** en todo el cuento (consistencia).
 - Educativo: para «cuenta del 1 al 5» pon una escena `counting` (`{"emoji":"🍎","n":5,"label":"manzanas"}`); para el abecedario, una `letter` por letra; para figuras, `shapes`.
+
+---
+## ORIENTACIÓN: vertical (9:16) y horizontal (16:9)
+Todos los modos funcionan en las dos orientaciones. Pregunta al usuario **dónde lo va a publicar** (Reels/TikTok/Shorts → vertical; YouTube, presentaciones, TV → horizontal) y, si no sabe, usa vertical.
+
+| Modo | Vertical 1080×1920 | Horizontal 1920×1080 |
+|---|---|---|
+| **cuento** | nativo | **nativo**: mundos más anchos con decorado repetido, página de cuento con la ilustración a la izquierda y el texto a la derecha, portada/moraleja/FIN recompuestos |
+| **B-roll** (`insert`) | nativo | **dos columnas**: el texto grande a la izquierda y el visual (gráfica, chat, navegador…) a la derecha; `rain`, `reaction`, `image` a pantalla completa |
+| **normal** | nativo | **nativo**: subtítulos, zooms y rótulo escalados a la altura; el video se normaliza a 1920×1080 |
+| **crimson / personaje** | nativo | el presentador y su texto se componen en el lienzo vertical y se **encajan por altura** en el horizontal sobre un fondo ampliado (video desenfocado o el set del personaje) |
+
+- **Cómo se elige:** `prepare.py … --orientation vertical|horizontal|auto` (auto: horizontal si el video es más ancho que alto), `character.py plan … --orientation horizontal`, o cambiarlo al renderizar con `render.py work --orientation horizontal` (reescribe el plan; sirve para sacar las dos versiones del mismo plan).
+- `plan.json` guarda `"orientation": "horizontal"`. `autoplan.py` la hereda de `prepare.json`.
+- **Subtítulos/rótulo/CTA** se colocan por porcentaje de la altura (69 % / 57 % / 85 %) si no fijas `y`; no pongas `y` en píxeles en un plan que vayas a renderizar en las dos orientaciones.
+- Un video **vertical** de entrada renderizado en **horizontal** se ve como columna centrada con fondo desenfocado; para un horizontal de verdad, graba en horizontal.
+- `--format square|both` genera además el 1:1 (en horizontal, el video entero sobre su propio fondo desenfocado).
+- Los layouts de cuento no necesitan cambios al pasar de una orientación a otra: usan porcentajes del lienzo.
 
 ---
 ## CATÁLOGO DE B-ROLL (escenas `insert`)

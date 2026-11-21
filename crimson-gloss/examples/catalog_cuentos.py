@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """work/plan.json con una escena de cada layout de CUENTOS y EDUCATIVOS + generales nuevos.
-   python catalog_cuentos.py WORK"""
+   python catalog_cuentos.py WORK [vertical|horizontal]"""
 import json, os, sys
 
 work = sys.argv[1] if len(sys.argv) > 1 else 'work'
@@ -51,5 +51,6 @@ for sp in specs:
     sc['lines'] = [{**l, 'at': round(t + 0.12 + l['at'], 2)} for l in sp['_lines']]
     scenes.append(sc); t += D
 plan = {'mode': 'cuento', 'duration': round(t + 0.3, 2), 'fps': 30, 'set': {'kind': 'studio'}, 'music': None, 'character': None, 'scenes': scenes}
+plan['orientation'] = sys.argv[2] if len(sys.argv) > 2 else 'vertical'  # vertical | horizontal
 json.dump(plan, open(os.path.join(work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(len(specs), 'layouts,', plan['duration'], 's')

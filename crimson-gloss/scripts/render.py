@@ -161,10 +161,11 @@ def write_srt(work, plan):
     open(path, 'w', encoding='utf-8').write('\n'.join(out))
     return path
 
-def make_square(final):
+def make_square(final, horizontal=False):
     """1:1 sin recortar el texto: el reel entero centrado sobre su propio fondo desenfocado."""
     sq = final.replace('.mp4', '_1x1.mp4')
-    sh(f'ffmpeg -v error -y -i "{final}" -filter_complex "[0:v]scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080,boxblur=30:6[b];[0:v]scale=-2:1080[f];[b][f]overlay=(W-w)/2:0" -c:v libx264 -crf 20 -pix_fmt yuv420p -c:a copy -movflags +faststart "{sq}"')
+    fg = '[0:v]scale=1080:-2[f];[b][f]overlay=0:(H-h)/2' if horizontal else '[0:v]scale=-2:1080[f];[b][f]overlay=(W-w)/2:0'
+    sh(f'ffmpeg -v error -y -i "{final}" -filter_complex "[0:v]scale=1080:1080:force_original_aspect_ratio=increase,crop=1080:1080,boxblur=30:6[b];{fg}" -c:v libx264 -crf 20 -pix_fmt yuv420p -c:a copy -movflags +faststart "{sq}"')
     return sq
 
 def main():
@@ -172,6 +173,7 @@ def main():
     ap.add_argument('work'); ap.add_argument('--plan', default='plan.json'); ap.add_argument('--out', default='final.mp4')
     ap.add_argument('--still', nargs='*', type=float)
     ap.add_argument('--fps', type=int, choices=[30, 60], help='60 = movimiento más suave (render 2x más lento)')
+    ap.add_argument('--orientation', choices=['vertical', 'horizontal'], help='cambia la orientación del plan (1080x1920 o 1920x1080)')
     ap.add_argument('--format', choices=['reel', 'square', 'both'], default='reel')
     ap.add_argument('--strict', action='store_true', help='abortar si el lint encuentra avisos')
     a = ap.parse_args()
@@ -181,6 +183,7 @@ def main():
         plan['bg'] = json.load(open(os.path.join(work, 'prepare.json'))).get('bg')
     validate(plan, work)
     if a.fps: plan['fps'] = a.fps
+    if a.orientation: plan['orientation'] = a.orientation
     warns = lint(plan)
     for w_ in warns: print('[crimson] aviso:', w_)
     if warns and a.strict: sys.exit('[crimson] lint con avisos (--strict)')
@@ -213,7 +216,7 @@ def main():
     srt = write_srt(work, plan)
     extra = ''
     if a.format in ('square', 'both'):
-        extra = '  + ' + os.path.basename(make_square(final))
+        extra = '  + ' + os.path.basename(make_square(final, plan.get('orientation') == 'horizontal'))
     if srt: extra += '  + subtitulos.srt'
     print('[crimson] extras:' + (extra or ' ninguno'))
     print('[crimson] listo: ' + final + '  (informe: informe.md)')

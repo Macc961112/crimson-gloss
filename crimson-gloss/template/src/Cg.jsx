@@ -1,4 +1,5 @@
 // Crimson Gloss: plantilla guiada por datos. Todo sale de `plan` (ver SKILL.md).
+import { createContext, useContext } from 'react';
 import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, random, spring, staticFile, useCurrentFrame } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/BricolageGrotesque';
 import { Character, SetWall, SetProps, SetFloor } from './Character';
@@ -14,6 +15,10 @@ const R = (s, lo = 0, hi = 1) => lo + random(s) * (hi - lo);
 
 const DEFAULT_TH = { accent: '#e10600', dark: '#7a0012', light: '#ff2a2a', soft: '#ff9aa8', bg: '#ececf0', ink: '#c8102e' };
 let TH = DEFAULT_TH; // se fija al renderizar <Cg>
+// Dimensiones del lienzo: vertical 1080x1920 (por defecto) u horizontal 1920x1080. Los componentes las leen con useDims().
+export const Dims = createContext({ W: 1080, H: 1920 });
+export const useDims = () => useContext(Dims);
+export let CW = 1080, CH = 1920;
 
 // --- Texto -------------------------------------------------------------------
 // theme.mid / theme.outline: para fondos oscuros (rojo más claro + borde blanco fino) y que el texto se lea
@@ -203,6 +208,7 @@ const stickerOutline = '0 0 0 #fff, 4px 0 0 #fff, -4px 0 0 #fff, 0 4px 0 #fff, 0
 
 const InsertScene = ({ sc }) => {
   const t = useT();
+  const { W, H } = useDims();
   if (t < sc.from + 0.12 || t >= sc.to + 0.1) return null;
   const s = sc.from + 0.12;
   const out = prog(t, sc.to - 0.2, sc.to + 0.1);
@@ -210,10 +216,10 @@ const InsertScene = ({ sc }) => {
   if (isFull(sc)) return <AbsoluteFill style={{ opacity: 1 - out * 0.4, filter: `blur(${out * 30}px)` }}><BrollBody sc={sc} s={s} /></AbsoluteFill>;
   return (
     <AbsoluteFill style={{ background: `linear-gradient(180deg, ${c1} 0%, ${c2} 55%, ${c3} 100%)`, filter: `blur(${out * 50}px)`, opacity: 1 - out * 0.4 }}>
-      {Array.from({ length: 16 }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, -100, 1000) + Math.sin(t * 0.6 + i) * 16, top: R(i + 30, 150, 1700), width: R(i + 60, 260, 520), height: R(i + 60, 200, 380), borderRadius: '50%', background: '#fff', opacity: R(i + 90, 0.18, 0.5), filter: 'blur(30px)' }} />)}
+      {Array.from({ length: 16 }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, -100, W - 80) + Math.sin(t * 0.6 + i) * 16, top: R(i + 30, H * 0.08, H * 0.88), width: R(i + 60, 260, 520) * (H / 1920 + 0.4), height: R(i + 60, 200, 380) * (H / 1920 + 0.4), borderRadius: '50%', background: '#fff', opacity: R(i + 90, 0.18, 0.5), filter: 'blur(30px)' }} />)}
       <BrollBody sc={sc} s={s} />
-      <Halftone at={s} x={540} y={900} size={1500} />
-      <Pixels at={s} x={90} y={210} /><Pixels at={s + 0.9} x={820} y={190} flip />
+      <Halftone at={s} x={W / 2} y={H * 0.47} size={Math.max(W, H) * 0.78} />
+      <Pixels at={s} x={W * 0.08} y={H * 0.11} /><Pixels at={s + 0.9} x={W * 0.76} y={H * 0.1} flip />
     </AbsoluteFill>
   );
 };
@@ -260,7 +266,7 @@ const PersonVideo = ({ plan, src, transparent }) => {
   return (
     <AbsoluteFill style={{ transformOrigin: '50% 100%', transform: `scale(${z})`, ...feather }}>
       <AbsoluteFill style={{ transformOrigin: '50% 38%', transform: `scale(${punchAt(plan, t)})` }}>
-        <OffthreadVideo src={staticFile(src)} transparent={transparent} muted={transparent} style={{ width: 1080, height: 1920, objectFit: 'cover' }} />
+        <OffthreadVideo src={staticFile(src)} transparent={transparent} muted={transparent} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
       </AbsoluteFill>
     </AbsoluteFill>
   );
@@ -269,6 +275,7 @@ const PersonVideo = ({ plan, src, transparent }) => {
 // --- Modo normal: subtítulos palabra a palabra, rótulo y llamada a la acción ----------
 const Captions = ({ cfg }) => {
   const t = useT();
+  const { H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
   const ws = cfg.words || [];
   if (!ws.length) return null;
   const per = cfg.perLine ?? 3;
@@ -284,11 +291,11 @@ const Captions = ({ cfg }) => {
   const k = prog(t, ch[0].s - 0.04, ch[0].s + 0.12);
   const emph = new Set((cfg.emphasis || []).map((x) => String(x).toLowerCase()));
   return (
-    <div style={{ position: 'absolute', left: 60, right: 60, top: cfg.y ?? 1330, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 18px', transform: `scale(${0.9 + k * 0.1}) translateY(${(1 - k) * 24}px)`, opacity: k }}>
+    <div style={{ position: 'absolute', left: 60, right: 60, top: cfg.y ?? Math.round(H * 0.69), display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 18px', transform: `scale(${0.9 + k * 0.1}) translateY(${(1 - k) * 24}px)`, opacity: k }}>
       {ch.map((w) => {
         const on = t >= w.s && t < w.e + 0.04;
         const em = emph.has(w.w.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase());
-        return <span key={w.i} style={{ display: 'inline-block', fontFamily: F, fontWeight: 800, fontSize: cfg.size ?? 84, letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: 1.05, color: on ? (cfg.activeText ?? '#111') : em ? TH.accent : '#fff', background: on ? TH.accent : 'transparent', borderRadius: 16, padding: '0 14px', textShadow: on ? 'none' : '0 4px 0 #00000088, 0 0 18px #00000066', transform: `scale(${on ? 1.1 : 1})` }}>{w.w.replace(/[.,;:]+$/, '')}</span>;
+        return <span key={w.i} style={{ display: 'inline-block', fontFamily: F, fontWeight: 800, fontSize: cfg.size ?? Math.round(84 * sc), letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: 1.05, color: on ? (cfg.activeText ?? '#111') : em ? TH.accent : '#fff', background: on ? TH.accent : 'transparent', borderRadius: 16, padding: '0 14px', textShadow: on ? 'none' : '0 4px 0 #00000088, 0 0 18px #00000066', transform: `scale(${on ? 1.1 : 1})` }}>{w.w.replace(/[.,;:]+$/, '')}</span>;
       })}
     </div>
   );
@@ -296,24 +303,26 @@ const Captions = ({ cfg }) => {
 
 const Lower = ({ cfg }) => {
   const t = useT();
+  const { H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
   const at = cfg.at ?? 0.4, to = at + (cfg.dur ?? 3.2);
   if (t < at || t > to + 0.4) return null;
   const k = prog(t, at, at + 0.35), o = prog(t, to, to + 0.3);
   return (
-    <div style={{ position: 'absolute', left: 60, top: cfg.y ?? 1100, transform: `translateX(${(1 - k) * -520 - o * 520}px)` }}>
-      <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: 64, padding: '6px 28px 10px', borderRadius: 14, letterSpacing: '-0.03em', width: 'fit-content' }}>{cfg.name}</div>
-      {cfg.role && <div style={{ background: '#111', color: '#fff', fontFamily: F, fontWeight: 500, fontSize: 34, padding: '6px 22px', borderRadius: '0 0 14px 14px', width: 'fit-content' }}>{cfg.role}</div>}
+    <div style={{ position: 'absolute', left: 60, top: cfg.y ?? Math.round(H * 0.57), transform: `translateX(${(1 - k) * -520 - o * 520}px)` }}>
+      <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: Math.round(64 * sc), padding: '6px 28px 10px', borderRadius: 14, letterSpacing: '-0.03em', width: 'fit-content' }}>{cfg.name}</div>
+      {cfg.role && <div style={{ background: '#111', color: '#fff', fontFamily: F, fontWeight: 500, fontSize: Math.round(34 * sc), padding: '6px 22px', borderRadius: '0 0 14px 14px', width: 'fit-content' }}>{cfg.role}</div>}
     </div>
   );
 };
 
 const Cta = ({ cfg }) => {
   const t = useT();
+  const { H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
   if (t < cfg.at) return null;
   const sp = spring({ frame: Math.round((t - cfg.at) * FPS), fps: FPS, config: { damping: 12 } });
   return (
-    <div style={{ position: 'absolute', left: 0, right: 0, top: cfg.y ?? 1640, display: 'flex', justifyContent: 'center' }}>
-      <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: 54, padding: '10px 38px 14px', borderRadius: 99, transform: `scale(${sp * (1 + 0.03 * Math.sin(t * 8))})`, boxShadow: `0 14px 40px ${TH.accent}66` }}>{cfg.text}</div>
+    <div style={{ position: 'absolute', left: 0, right: 0, top: cfg.y ?? Math.round(H * 0.85), display: 'flex', justifyContent: 'center' }}>
+      <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: Math.round(54 * sc), padding: '10px 38px 14px', borderRadius: 99, transform: `scale(${sp * (1 + 0.03 * Math.sin(t * 8))})`, boxShadow: `0 14px 40px ${TH.accent}66` }}>{cfg.text}</div>
     </div>
   );
 };
@@ -349,10 +358,31 @@ const duck = (t, spans, base) => {
   return base * (1 - 0.62 * k);
 };
 
+// --- Horizontal: los modos con presentador se componen en el lienzo vertical (1080x1920) y se encajan por altura -------
+const Backdrop = ({ plan }) => {
+  const t = useT();
+  if (plan.character) return <><SetWall set={plan.set} t={t} accent={TH.accent} /><div style={{ position: 'absolute', left: 0, right: 0, bottom: 0, top: 1560 * (CH / 1920), background: plan.set?.kind === 'night' ? 'linear-gradient(#171a3c, #0a0b1c)' : 'linear-gradient(#e6e4ec, #d2d0da)' }} /></>;
+  if (plan.video) return <AbsoluteFill style={{ overflow: 'hidden' }}><OffthreadVideo src={staticFile(plan.video)} muted style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(46px) brightness(0.85)', transform: 'scale(1.25)' }} /></AbsoluteFill>;
+  return <AbsoluteFill style={{ background: Array.isArray(plan.bg) ? `linear-gradient(180deg, ${plan.bg[0]}, ${plan.bg[1]})` : TH.bg }} />;
+};
+const DesignFit = ({ plan, bare, children }) => {
+  const k = CH / 1920, left = (CW - 1080 * k) / 2;
+  return (
+    <AbsoluteFill>
+      {!bare && <Backdrop plan={plan} />}
+      <div style={{ position: 'absolute', left, top: 0, width: 1080, height: 1920, transformOrigin: '0 0', transform: `scale(${k})`, overflow: 'hidden' }}>
+        <Dims.Provider value={{ W: 1080, H: 1920 }}>{children}</Dims.Provider>
+      </div>
+    </AbsoluteFill>
+  );
+};
+
 const sfx = (src, at, vol, dur, key) => <Sequence key={key} from={Math.max(0, Math.round(at * FPS))} durationInFrames={dur}><Audio src={staticFile(src)} volume={vol} /></Sequence>;
 
 export const Cg = ({ plan }) => {
   FPS = plan.fps ?? 30;
+  const land = plan.orientation === 'horizontal';
+  CW = land ? 1920 : 1080; CH = land ? 1080 : 1920;
   TH = { ...DEFAULT_TH, ...(plan.theme || {}) };
   const speechWords = plan.character?.words || plan.captions?.words || [];
   const spans = plan.speech || speechSpans(speechWords);
@@ -363,21 +393,33 @@ export const Cg = ({ plan }) => {
   const flashes = inserts.flatMap((s) => [s.from + 0.12, s.to + 0.1]);
   const gray = (plan.introFade === false || plan.character) ? 0 : 1 - prog(t, 0, 0.35, Easing.linear);
   const layerScenes = (layer) => scenes.filter((s) => s.type !== 'insert').map((s, i) => <PresenterScene key={i} sc={s} plan={plan} layer={layer} />);
-  return (
-    <AbsoluteFill style={{ background: Array.isArray(plan.bg) ? `linear-gradient(180deg, ${plan.bg[0]}, ${plan.bg[1]})` : TH.bg }}>
-      <BlurMask cuts={cuts}>
-        {plan.character
-          ? <><Stage plan={plan} depth={0.5}><SetWall set={plan.set} t={t} accent={TH.accent} /></Stage><Stage plan={plan} depth={0.8}><SetProps set={plan.set} t={t} accent={TH.accent} /></Stage><Stage plan={plan} depth={1}><SetFloor set={plan.set} accent={TH.accent} /></Stage></>
-          : plan.video ? <PersonVideo plan={plan} src={plan.video} /> : null}
-        {layerScenes('back')}
-        {plan.character ? <Stage plan={plan} depth={1}><CharacterLayer plan={plan} /></Stage> : plan.cutout ? <PersonVideo plan={plan} src={plan.cutout} transparent /> : null}
-        {layerScenes('front')}
-        {inserts.map((s, i) => <InsertScene key={i} sc={s} />)}
-        <AbsoluteFill style={{ background: '#8c8c94', opacity: gray * 0.85 }} />
-      </BlurMask>
+  const useFit = land && (scenes.some((x) => x.type !== 'insert') || !!plan.character);
+  const layers = (
+    <>
+      {plan.character
+        ? <>{!useFit && <Stage plan={plan} depth={0.5}><SetWall set={plan.set} t={t} accent={TH.accent} /></Stage>}<Stage plan={plan} depth={0.8}><SetProps set={plan.set} t={t} accent={TH.accent} /></Stage><Stage plan={plan} depth={1}><SetFloor set={plan.set} accent={TH.accent} /></Stage></>
+        : plan.video ? <PersonVideo plan={plan} src={plan.video} /> : null}
+      {layerScenes('back')}
+      {plan.character ? <Stage plan={plan} depth={1}><CharacterLayer plan={plan} /></Stage> : plan.cutout ? <PersonVideo plan={plan} src={plan.cutout} transparent /> : null}
+      {layerScenes('front')}
+    </>
+  );
+  const overlays = (
+    <>
       {plan.captions && <Captions cfg={plan.captions} />}
       {plan.lower && <Lower cfg={plan.lower} />}
       {plan.cta && <Cta cfg={plan.cta} />}
+    </>
+  );
+  return (
+    <Dims.Provider value={{ W: CW, H: CH }}>
+    <AbsoluteFill style={{ background: Array.isArray(plan.bg) ? `linear-gradient(180deg, ${plan.bg[0]}, ${plan.bg[1]})` : TH.bg }}>
+      <BlurMask cuts={cuts}>
+        {useFit ? <DesignFit plan={plan}>{layers}</DesignFit> : layers}
+        {inserts.map((s, i) => <InsertScene key={i} sc={s} />)}
+        <AbsoluteFill style={{ background: '#8c8c94', opacity: gray * 0.85 }} />
+      </BlurMask>
+      {useFit ? <DesignFit plan={plan} bare>{overlays}</DesignFit> : overlays}
       <Flash cuts={flashes} />
       {plan.voice && <Audio src={staticFile(plan.voice)} />}
       {plan.music && <Audio src={staticFile(plan.music)} volume={(f) => duck(f / FPS, spans, plan.musicVolume ?? 0.08)} />}
@@ -385,6 +427,7 @@ export const Cg = ({ plan }) => {
       {scenes.flatMap((sc, i) => (sc.elements || []).filter((e) => e.kind === 'gloss').map((e, j) => sfx('pop.wav', e.at - 0.1, 0.3, 5, `g${i}_${j}`)))}
       {scenes.map((sc, i) => (sc.elements?.length ? sfx('click.wav', sc.elements[0].at - 0.15, 0.4, 3, 'k' + i) : null))}
     </AbsoluteFill>
+    </Dims.Provider>
   );
 };
 

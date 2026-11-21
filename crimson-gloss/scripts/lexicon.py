@@ -36,7 +36,7 @@ def norm(w):
 def emoji_for(word):
     k = norm(word)
     if not k: return None
-    for c in (k, k[:-1] if k.endswith('s') else k, k[:-2] if k.endswith('es') else k, k[:-1] if k.endswith(('a', 'o')) else k):
+    for c in (k, k[:-1] if k.endswith('s') else k, k[:-2] if k.endswith('es') and len(k) > 5 else k, k[:-1] if k.endswith(('a', 'o')) and len(k) > 5 else k):  # sin recortar palabras cortas (solo != sol)
         if c in EMOJI: return EMOJI[c]
     if len(k) >= 6:
         for key, e in EMOJI.items():

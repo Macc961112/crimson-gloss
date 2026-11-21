@@ -143,7 +143,36 @@ render.py work --still 1 5 10  →  render.py work --out final.mp4 --format both
 - La sincronía es por letras (muy buena en español, aproximada en inglés).
 - La voz de `edge-tts` necesita internet y envía el texto a Microsoft.
 
-## 9. Límites generales
+## 9. Catálogo de B-roll
+
+Una escena `insert` cubre al presentador 2–4 s. Se compone de: **fondo** (`bg`), **cabecera** (`lines`) y un **layout**. Hay 17:
+
+| `layout` | Cuándo usarlo | Parámetros |
+|---|---|---|
+| `phone` | idea genérica con un objeto (por defecto) | `object:{emoji\|image}`, `stickers:[emoji]` |
+| `stat` | una cifra: «300%», «42 skills», «3 meses» | `stat:{value, prefix, suffix, decimals, label, emoji}` (cuenta hasta el valor) |
+| `chart` | crece/sube o cae/baja | `chart:{up, kind:'line'\|'bar', data:[n…], label:'+312%'}` |
+| `steps` | «primero… segundo… tercero…», procesos | `steps:[{text, emoji, at}]` (hasta 5) |
+| `checklist` | enumeraciones, «sin A, sin B y sin C» | `items:[{text, ok:true\|false, at}]` |
+| `compare` | antes/después, mito/realidad | `compare:{left:{title, items[]}, right:{title, items[]}}` |
+| `quote` | una cita o frase fuerte | `quote:{text, author}` |
+| `chat` | mensajes, clientes, DM | `chat:{name, emoji, messages:[{from:'me'\|'them', text, at}]}` |
+| `browser` | web, enlace, tienda | `browser:{url, title, button, image}` (escribe la URL y hace clic) |
+| `terminal` | comandos, código, instalar | `terminal:{title, lines:[{text, kind:'cmd'\|'out', at}]}` |
+| `grid` | varias cosas a la vez (herramientas, funciones) | `grid:{items:[{emoji,label}], cols}` |
+| `meter` | porcentaje ≤ 100 («87 % de retención») | `meter:{value, label, suffix}` |
+| `rain` | dinero, celebración | `rain:{emoji, count, center}` |
+| `notifs` | avisos, ventas, alertas | `notifs:[{app, title, body, at}]` |
+| `rating` | reseñas, prueba social | `rating:{stars, score, label}` |
+| `image` | foto o captura del usuario a pantalla completa | `image:{src:'assets/x.png', zoom:0.12}` (Ken Burns) |
+| `clip` | clip de video del usuario | `clip:{src:'assets/x.mp4', start:0}` |
+
+
+**Cómo elige el modo personaje** (`character.py plan`), por orden de prioridad en cada trozo del guion: cifra (`stat` o `meter` si es un porcentaje ≤ 100) → «crece/cae» (`chart`) → enlace o dirección web (`browser`, con la URL dicha o `--url`) → comando/código (`terminal`) → mensajes (`chat`) → reseñas (`rating`) → dinero (`rain`) → enumeración de 3+ elementos (`checklist`) → 3+ conceptos con emoji (`grid`) → objeto con emoji (`phone`). «Primero, segundo, tercero» se agrupa en **una** escena `steps`. Nunca repite el mismo layout dos veces seguidas y limita la frecuencia (1 cada 3 trozos; las cifras, cada 2). `image`, `clip`, `compare` y `quote` los pones tú en `plan.json`.
+
+**Qué es automático y qué conviene revisar:** la elección del layout y sus textos salen de las palabras del guion (nada se inventa: el chat usa tu frase, el terminal también), pero la etiqueta de una cifra puede quedar rara («ellos vuelve»); corrígela a mano.
+
+## 10. Límites generales
 - Probado en Windows con un clip limpio en español, no con un video real filmado.
 - No detecta repeticiones/tomas falsas: solo corta **silencios**.
 - La transcripción local se equivoca con nombres propios; hay que corregirlos.

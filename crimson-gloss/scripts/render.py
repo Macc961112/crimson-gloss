@@ -45,10 +45,12 @@ def install_runtime():
 def prefix_media(o):
     """Las rutas de medios del plan son relativas a WORKDIR; en el runtime viven en public/media/."""
     if isinstance(o, dict):
-        return {k: (('media/' + v) if k in ('video', 'cutout', 'music', 'voice', 'image') and isinstance(v, str) and v else prefix_media(v)) for k, v in o.items()}
+        return {k: (('media/' + v) if k in ('video', 'cutout', 'music', 'voice', 'image', 'src') and isinstance(v, str) and v else prefix_media(v)) for k, v in o.items()}
     if isinstance(o, list):
         return [prefix_media(x) for x in o]
     return o
+
+LAYOUTS = 'phone stat chart steps checklist compare quote chat browser terminal grid meter rain notifs rating image clip'.split()
 
 def validate(plan, work):
     errs = []
@@ -59,6 +61,7 @@ def validate(plan, work):
         if sc['to'] <= sc['from']: errs.append(f'escena {i}: to <= from')
         if sc['to'] > plan['duration'] + 0.05: errs.append(f'escena {i}: termina después de duration')
         prev = sc['to']
+        if sc.get('type') == 'insert' and sc.get('layout', 'phone') not in LAYOUTS: errs.append(f"escena {i}: layout desconocido «{sc.get('layout')}» (válidos: {', '.join(LAYOUTS)})")
         for e in sc.get('elements', []):
             if not (sc['from'] - 0.3 <= e['at'] <= sc['to']): errs.append(f"escena {i}: '{e.get('text', e.get('kind'))}' entra en {e['at']}s, fuera de la escena")
     for key in ('video', 'cutout', 'music', 'voice'):

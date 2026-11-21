@@ -129,6 +129,7 @@ def keyword_idx(ch, used):
     best, bs = None, -1
     for i, w in enumerate(ch):
         k = norm(w['w'])
+        if re.search(r'[a-z]\.[a-z]', w['w']): continue  # direcciones web: no son palabra clave
         if len(k) < 4 and not k.isdigit(): continue
         if k in STOP: continue
         sc = len(k) + (6 if emoji_for(w['w']) else 0) + (5 if k.isdigit() else 0) + (2 if w['w'][:1].isupper() and i else 0) + 0.4 * i
@@ -136,10 +137,126 @@ def keyword_idx(ch, used):
         if sc > bs: best, bs = i, sc
     return best
 
-def auto_scenes(tr, dur):
-    chs = chunks_of(tr['words'])
-    scenes, used, n_ins, last_ins = [], [], 0, -9
+UP = set('crecimiento crecer crece subir sube suben ganancia ganancias aumento aumentar exito ingresos ventas beneficio beneficios resultados mejorar mejora multiplicar escalar'.split())
+DOWN = set('perdida perdidas caida caer baja bajar riesgo deuda gasto gastos perder quiebra'.split())
+WEB = set('enlace link sitio web pagina internet url dominio tienda landing'.split())
+CODE = set('codigo comando programar terminal instalar script github clonar'.split())
+CHAT = set('mensaje mensajes dm whatsapp chat comentario comentarios responder escribir escribeme contactar'.split())
+STAR = set('resena resenas estrella estrellas calificacion review opinion testimonio testimonios'.split())
+MONEY = set('dinero billete billetes rico riqueza millonario millonarios efectivo cash'.split())
+NOTIF = set('notificacion notificaciones alerta aviso'.split())
+ORD = {'primero': 1, 'segundo': 2, 'tercero': 3, 'cuarto': 4, 'quinto': 5, 'first': 1, 'second': 2, 'third': 3, 'fourth': 4}
+NWORDS = {'diez': 10, 'veinte': 20, 'treinta': 30, 'cuarenta': 40, 'cincuenta': 50, 'cien': 100, 'mil': 1000, 'millon': 1000000}
+LABEL_SKIP = set('en de a solo un una el la los las al del por con y o e ciento porciento sobre hasta'.split())
+NOUNS = set('pasos minutos dias horas segundos semanas meses anos veces clientes personas videos skills herramientas'.split())
+BG_FOR = {'stat': 'gold', 'meter': 'gold', 'rating': 'gold', 'steps': 'sunset', 'checklist': 'rose', 'browser': 'sky', 'chat': 'mint', 'terminal': 'night', 'grid': 'sunset', 'rain': 'night', 'notifs': 'rose', 'quote': 'night'}
+
+def parse_num(w):
+    t = w.replace('%', '')
+    m = re.fullmatch(r'[$€]?(\d+(?:[.,]\d+)?)', t)
+    if m:
+        txt = m.group(1)
+        if re.fullmatch(r'\d{1,3}([.,]\d{3})+', txt): return float(re.sub(r'[.,]', '', txt)), 0
+        v = float(txt.replace(',', '.'))
+        return v, (len(txt.split(',')[-1]) if (',' in txt or '.' in txt) and not txt.endswith(('.', ',')) else 0)
+    k = norm(w)
+    return (float(NWORDS[k]), 0) if k in NWORDS else None
+
+def ordinal_steps(words):
+    """«Primero… Segundo… Tercero…» -> una sola escena de pasos."""
+    starts = []
+    for i, w in enumerate(words):
+        k = norm(w['w'])
+        if k in ORD and (i == 0 or re.search(r'[.!?]$', words[i - 1]['w'])): starts.append(i)
+    if len(starts) < 2: return None, set()
+    steps, end_i = [], starts[-1]
+    for n, i in enumerate(starts):
+        j = starts[n + 1] if n + 1 < len(starts) else min(len(words), i + 9)
+        body = [x for x in words[i + 1:j]][:5]
+        text = re.sub(r'[,;:.!?]+$', '', ' '.join(x['w'] for x in body)).strip()
+        steps.append({'text': text[:1].upper() + text[1:], 'at': round(words[i]['s'] + 0.1, 2)})
+        end_i = j - 1
+    emo = [emoji_for(x['text'].split()[-1]) or emoji_for(x['text'].split()[0]) for x in steps]
+    for st, e in zip(steps, emo):
+        if e: st['emoji'] = e
+    return {'type': 'insert', 'layout': 'steps', 'bg': 'sunset', 'steps': steps, 'lines': [],
+            'from': round(max(0, words[starts[0]]['s'] - 0.2), 2), 'to': round(words[end_i]['e'] + 0.4, 2)}, set(range(starts[0], end_i + 1))
+
+def list_items(ch):
+    segs, cur = [], []
+    for w in ch:
+        cur.append(w)
+        if re.search(r'[,;]$', w['w']) or norm(w['w']) in ('y', 'e', 'and', 'o'):
+            if norm(w['w']) in ('y', 'e', 'and', 'o'): cur.pop()
+            if cur: segs.append(cur)
+            cur = []
+    if cur: segs.append(cur)
+    segs = [sg for sg in segs if sg]
+    if len(segs) < 3: return None
+    items = []
+    for sg in segs[-4:]:
+        sg = sg[-2:] if len(sg) > 2 else sg
+        txt = re.sub(r'[,;:.!?]+$', '', ' '.join(x['w'] for x in sg)).strip()
+        if txt: items.append({'text': txt[:1].upper() + txt[1:], 'at': round(sg[0]['s'], 2)})
+    return items if len(items) >= 3 else None
+
+def pick_broll(ch, ki, lead, emo, prev_layout, url, after=()):
+    """Devuelve (layout, params, lineas_extra) según lo que dice el trozo; None si no encaja ninguno."""
+    ks = [norm(w['w']) for w in ch]
+    cands = []
+    for i, w in enumerate(ch):
+        nv = parse_num(w['w'])
+        if nv and norm(w['w']) != 'y':
+            val, dec = nv
+            pct = '%' in w['w'] or (i + 1 < len(ch) and ks[i + 1] in ('porciento', 'por')) or (i + 2 < len(ch) and ks[i + 1] == 'por' and ks[i + 2].startswith('ciento'))
+            nxt = [x for x in (list(ch[i + 1:]) + list(after))[:5] if norm(x['w']) not in LABEL_SKIP][:2]
+            label = re.sub(r'[,;:.!?]+$', '', ' '.join(x['w'] for x in nxt))
+            if pct and val <= 100: cands.append(('meter', {'meter': {'value': val, 'label': label or lead}}))
+            elif val >= 10 or pct or (i + 1 < len(ch) and ks[i + 1] in NOUNS):
+                st = {'value': val, 'decimals': dec, 'label': label}
+                if pct: st['suffix'] = '%'
+                if i and ks[i - 1] in ('mas', 'hasta'): st['prefix'] = '+'
+                e = emoji_for(label.split()[-1]) if label else None
+                if e: st['emoji'] = e
+                cands.append(('stat', {'stat': st}))
+            break
+    sset = set(ks)
+    if sset & UP: cands.append(('chart', {'chart': {'up': True, 'label': ''}}))
+    if sset & DOWN: cands.append(('chart', {'chart': {'up': False, 'label': ''}}))
+    dom = next((w['w'].strip('.,;:') for w in ch if re.fullmatch(r'[\w-]+(\.[\w-]+)+[\w/-]*', w['w'].strip('.,;:')) and not w['w'][0].isdigit()), None)
+    if dom or sset & WEB: cands.append(('browser', {'browser': {'url': dom or url or 'tusitio.com', 'title': 'Tu sitio web', 'button': 'Empezar'}}))
+    if sset & CODE:
+        txt = ' '.join(w['w'] for w in ch)[:44]
+        cands.append(('terminal', {'terminal': {'title': 'terminal', 'lines': [{'text': txt}, {'text': '✓ listo', 'kind': 'out'}]}}))
+    if sset & CHAT:
+        txt = re.sub(r'\s+', ' ', ' '.join(w['w'] for w in ch))[:70]
+        cands.append(('chat', {'chat': {'name': 'Chat', 'emoji': '💬', 'messages': [{'from': 'them', 'text': txt, 'at': round(ch[0]['s'] + 0.3, 2)}, {'from': 'me', 'text': '¡Listo! ✅', 'at': round(ch[0]['s'] + 1.5, 2)}]}}))
+    if sset & STAR: cands.append(('rating', {'rating': {'stars': 5, 'score': '5.0', 'label': ''}}))
+    if sset & MONEY: cands.append(('rain', {'rain': {'emoji': '💰', 'center': '🤑'}}))
+    if sset & NOTIF: cands.append(('notifs', {'notifs': [{'app': emo or '🔔', 'title': (ch[ki]['w'] if ki is not None else 'Aviso').strip('.,;:'), 'body': lead or ''}]}))
+    items = list_items(ch)
+    if items: cands.append(('checklist', {'items': items}))
+    es = []
+    for w in ch:
+        e = emoji_for(w['w'])
+        if e and e not in [x['emoji'] for x in es]: es.append({'emoji': e, 'label': re.sub(r'[,;:.!?]+$', '', w['w']).capitalize()})
+    if len(es) >= 3: cands.append(('grid', {'grid': {'items': es[:9]}}))
+    if emo: cands.append(('phone', {'object': {'emoji': emo}, 'stickers': [e['emoji'] for e in es if e['emoji'] != emo][:2] or ['✨']}))
+    for lay, params in cands:
+        if lay != prev_layout: return lay, params
+    return cands[0] if cands else None
+
+def auto_scenes(tr, dur, url=None, broll=True):
+    words = tr['words']
+    idx = {id(w): i for i, w in enumerate(words)}
+    steps_sc, consumed = ordinal_steps(words) if broll else (None, set())
+    chs = chunks_of(words)
+    scenes, used, n_ins, last_ins, prev_layout, steps_done = [], [], 0, -9, None, False
     for ci, ch in enumerate(chs):
+        inside = sum(1 for w in ch if idx[id(w)] in consumed)
+        if steps_sc and inside > len(ch) / 2:
+            if not steps_done: scenes.append(steps_sc); steps_done = True; last_ins = ci; prev_layout = 'steps'
+            continue
         ki = keyword_idx(ch, used)
         t0 = ch[0]['s']
         kw = ch[ki] if ki is not None else None
@@ -150,14 +267,21 @@ def auto_scenes(tr, dur):
         txt = lambda w: re.sub(r'[^\wÁÉÍÓÚÜÑáéíóúüñ%$€\- ]', '', w['w']).upper()
         emo = emoji_for(kw['w']) if kw else None
         if kw: used = (used + [norm(kw['w'])])[-6:]
-        is_ins = bool(emo) and ci - last_ins >= 4 and 0 < ci < len(chs) - 1 and (ch[-1]['e'] - t0) >= 1.8
+        pick = pick_broll(ch, ki, lead, emo, prev_layout, url, words[idx[id(ch[-1])] + 1: idx[id(ch[-1])] + 6]) if (broll and 0 < ci < len(chs) - 1 and (ch[-1]['e'] - t0) >= 1.8) else None
+        if pick and not (ci - last_ins >= 3 or (pick[0] in ('stat', 'meter') and ci - last_ins >= 2)): pick = None  # los números son lo más visual: admiten menos espacio
         sc = {}
-        if is_ins:
-            last_ins = ci
-            bg = BG_BY_EMOJI.get(emo) or BG_CYCLE[n_ins % len(BG_CYCLE)]; n_ins += 1
-            others = [e for e in (emoji_for(w['w']) for w in ch) if e and e != emo][:2]
-            lines = ([{'small': lead, 'at': round((lw[0] if lw else ch[0])['s'], 2), 'size': 56}] if lead else []) + [{'gloss': txt(kw), 'at': round(kw['s'], 2)}]
-            sc = {'type': 'insert', 'bg': bg, 'object': {'emoji': emo}, 'stickers': others or ['✨'], 'lines': lines}
+        if pick:
+            lay, params = pick
+            last_ins = ci; prev_layout = lay
+            if lay == 'phone': bg = BG_BY_EMOJI.get(emo) or BG_CYCLE[n_ins % len(BG_CYCLE)]
+            elif lay == 'chart': bg = 'mint' if params['chart']['up'] else 'night'
+            else: bg = BG_FOR.get(lay, BG_CYCLE[n_ins % len(BG_CYCLE)])
+            n_ins += 1
+            ls = [{'small': lead, 'at': round((lw[0] if lw else ch[0])['s'], 2), 'size': 56}] if lead else []
+            if lay not in ('stat', 'meter', 'rating', 'steps') and kw: ls.append({'gloss': txt(kw), 'at': round(kw['s'], 2)})
+            if lay == 'phone' and ls and 'size' not in ls[-1]: pass
+            sc = {'type': 'insert', 'layout': lay, 'bg': bg, **params, 'lines': ls}
+            if lay == 'stat' and params['stat'].get('label') and not ls: sc['lines'] = []
         else:
             els = []
             if lead: els.append({'kind': 'small', 'slot': 'tl', 'text': lead, 'at': round((lw[0] if lw else ch[0])['s'], 2), 'size': 50})
@@ -170,16 +294,18 @@ def auto_scenes(tr, dur):
             sc = {'type': 'presenter', 'zoom': ZOOMS[ci % len(ZOOMS)], 'elements': els}
         sc['from'] = 0.0 if ci == 0 else round(max(0.0, t0 - 0.18), 2)
         if sc['type'] == 'insert':
-            first = min((l['at'] for l in sc['lines']), default=t0)
+            first = min([l['at'] for l in sc.get('lines', [])] + [t0 + 0.1])
             sc['from'] = round(min(sc['from'], first - 0.2), 2)
         scenes.append(sc)
+    if steps_sc and not steps_done: scenes.append(steps_sc)
+    scenes.sort(key=lambda x: x['from'])
     for i, sc in enumerate(scenes):
-        sc['to'] = round(scenes[i + 1]['from'] if i + 1 < len(scenes) else dur, 2)
+        nxt = scenes[i + 1]['from'] if i + 1 < len(scenes) else dur
+        sc['to'] = round(min(sc.get('to', nxt), nxt) if sc.get('layout') == 'steps' else nxt, 2)
         if sc['to'] <= sc['from'] + 0.4: sc['to'] = round(sc['from'] + 0.6, 2)
-    # sin solapes
     for i in range(1, len(scenes)):
         if scenes[i]['from'] < scenes[i - 1]['to']: scenes[i - 1]['to'] = scenes[i]['from']
-    return [s for s in scenes if s['to'] > s['from'] + 0.2]
+    return [x for x in scenes if x['to'] > x['from'] + 0.2]
 
 def auto_gestures(words, scenes):
     cand, kinds = [], ['chop', 'open']
@@ -215,7 +341,7 @@ def cmd_plan(a):
         theme = {k: b[k] for k in ('accent', 'dark', 'mid', 'light', 'soft', 'ink', 'outline') if k in b}
         if b.get('set'): a.set = b['set']
         if b.get('character'): cfg = {**b['character'], **cfg}
-    scenes = auto_scenes(tr, dur)
+    scenes = auto_scenes(tr, dur, a.url, not a.no_broll)
     plan = {
         'mode': 'personaje', 'duration': dur, 'fps': a.fps, 'voice': 'voice.mp3',
         'music': 'music.wav' if os.path.exists(os.path.join(work, 'music.wav')) else None, 'musicVolume': 0.07,
@@ -227,7 +353,8 @@ def cmd_plan(a):
     if a.cta: plan['cta'] = {'text': a.cta, 'at': round(max(0.5, dur - 3.0), 2), 'y': 1700, 'activeText': '#ffffff'}
     json.dump(plan, open(os.path.join(work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     ins = sum(1 for s in scenes if s['type'] == 'insert')
-    print(f"[crimson] plan.json (personaje): {len(scenes)} escenas ({ins} insertos), {len(plan['character']['gestures'])} gestos, apariencia: {cfg or 'por defecto'}")
+    kinds = sorted({s.get('layout', 'phone') for s in scenes if s['type'] == 'insert'})
+    print(f"[crimson] plan.json (personaje): {len(scenes)} escenas ({ins} B-roll: {', '.join(kinds) or '-'}), {len(plan['character']['gestures'])} gestos, apariencia: {cfg or 'por defecto'}")
 
 def main():
     ap = argparse.ArgumentParser(); sp = ap.add_subparsers(dest='cmd', required=True)
@@ -239,6 +366,8 @@ def main():
     q.add_argument('--look', default=''); q.add_argument('--character'); q.add_argument('--brand')
     q.add_argument('--set', default='studio', choices=['studio', 'night']); q.add_argument('--cta'); q.add_argument('--captions', action='store_true')
     q.add_argument('--fps', type=int, default=30, choices=[30, 60])
+    q.add_argument('--url', help='enlace que se mostrará en las escenas de navegador')
+    q.add_argument('--no-broll', action='store_true', help='sin escenas inserto (solo presentador)')
     a = ap.parse_args()
     {'init': cmd_init, 'plan': cmd_plan}[a.cmd](a)
 

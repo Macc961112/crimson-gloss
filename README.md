@@ -20,6 +20,11 @@ Solo un **guion** (o tu voz) → un presentador **animado por código**: sincron
 
 ---
 
+### Catálogo de B-roll (17 tipos)
+Las escenas a pantalla completa no son una sola plantilla: `phone`, `stat` (número que cuenta), `chart` (línea/barras), `steps`, `checklist`, `compare`, `quote`, `chat`, `browser`, `terminal`, `grid`, `meter`, `rain`, `notifs`, `rating`, `image` (tu foto con zoom) y `clip` (tu video). En modo personaje se **eligen solos según lo que dice el guion** («creció 300 %» → cifra animada, «entra a tusitio.com» → navegador que escribe la URL y hace clic, «primero, segundo, tercero» → pasos…). Detalle y parámetros en [docs/COMO_FUNCIONA.md](docs/COMO_FUNCIONA.md#9-catálogo-de-b-roll).
+
+![catalogo](docs/demo-catalogo.gif)
+
 ## Instalar (1 comando)
 
 **Windows (PowerShell):**

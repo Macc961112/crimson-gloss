@@ -114,9 +114,38 @@ python "SKILL_DIR/scripts/render.py" work --out final.mp4 --format both  # 9:16 
 ```
 1. **Si el usuario solo da una idea** («hazme un video sobre X»): **escribe tú el guion** (25–60 s; frases cortas; gancho en la primera frase; una idea por frase; datos concretos; cierre con llamada a la acción) y **muéstraselo antes de generar la voz**.
 2. **`init`** genera `voice.mp3` con `edge-tts` (voces: `es-MX-JorgeNeural`, `es-ES-AlvaroNeural`, `es-AR-TomasNeural` hombre; `es-MX-DaliaNeural`, `es-ES-ElviraNeural` mujer; ajusta `--rate`). **Avisa al usuario:** `edge-tts` envía el **texto** del guion a Microsoft para sintetizarlo; con `--audio` y su propia voz no se envía nada (la transcripción es local).
-3. **`plan`** escribe `plan.json` con escenas automáticas guiadas por el guion (palabra clave gigante + emoji que la ilustra + insertos cada ~4 escenas), gestos y apariencia. `--look` entiende: hombre/mujer, barba (corta), gafas, calvo/tupé/largo/moño, traje/sudadera/camiseta (+ color), piel clara/morena/oscura, rubio/pelirrojo/canoso. Para control total: `--character c.json` con `{skin, hair, hairStyle(short|quiff|long|bun|bald), beard(none|stubble|full), glasses, top, outfit(hoodie|tee|suit), pants, shoes, chair, tie, lips, eyes}`. `--brand brand.json` fija colores (`accent`, `dark`, `light`, `ink`…), `set` y `character` de la marca.
+3. **`plan`** escribe `plan.json` con escenas automáticas guiadas por el guion (palabra clave gigante + emoji que la ilustra + B-roll del catálogo elegido según lo que se dice: cifras → `stat`/`meter`, «crece/cae» → `chart`, «primero/segundo/tercero» → `steps`, enlace → `browser`, comando → `terminal`, mensajes → `chat`, listas → `checklist`…), gestos y apariencia. `--look` entiende: hombre/mujer, barba (corta), gafas, calvo/tupé/largo/moño, traje/sudadera/camiseta (+ color), piel clara/morena/oscura, rubio/pelirrojo/canoso. Para control total: `--character c.json` con `{skin, hair, hairStyle(short|quiff|long|bun|bald), beard(none|stubble|full), glasses, top, outfit(hoodie|tee|suit), pants, shoes, chair, tie, lips, eyes}`. `--brand brand.json` fija colores (`accent`, `dark`, `light`, `ink`…), `set` y `character` de la marca.
 4. **Revisa y mejora `plan.json` con criterio** — la heurística acierta bastante pero no entiende todo: ¿la palabra gigante es la importante de la frase?, ¿el emoji ilustra la idea (p. ej. «estudio» sale 📚 pero puede ser 🎙️)?, ¿hay demasiados o pocos insertos?, ¿falta un gesto en el dato clave? Edita `scenes[]` y `character.gestures[]` (`{at, dur, kind, n}`) a mano. Las escenas siguen el mismo esquema que el modo crimson (abajo).
 5. **Renderiza**: primero `--still`, luego el final. `render.py` avisa del *lint* (textos que se pisan, escenas largas). `--fps 60` para movimiento más suave (render 2× más lento); `--format both` añade el cuadrado 1:1.
+
+---
+## CATÁLOGO DE B-ROLL (escenas `insert`)
+Un `insert` tapa al presentador 2–4 s con un fondo (`bg`: `sky` `sunset` `night` `mint` `gold` `paper` `rose`) y un **layout** que ilustra la idea. Elige el layout **por lo que se dice**, no por costumbre, y no repitas el mismo dos veces seguidas. Texto de cabecera con `lines` (`{small}` / `{gloss}` + `at`). En modo personaje, `character.py plan` los elige solo; tú puedes cambiarlos en `plan.json`.
+
+| `layout` | Cuándo usarlo | Parámetros |
+|---|---|---|
+| `phone` | idea genérica con un objeto (por defecto) | `object:{emoji\|image}`, `stickers:[emoji]` |
+| `stat` | una cifra: «300%», «42 skills», «3 meses» | `stat:{value, prefix, suffix, decimals, label, emoji}` (cuenta hasta el valor) |
+| `chart` | crece/sube o cae/baja | `chart:{up, kind:'line'\|'bar', data:[n…], label:'+312%'}` |
+| `steps` | «primero… segundo… tercero…», procesos | `steps:[{text, emoji, at}]` (hasta 5) |
+| `checklist` | enumeraciones, «sin A, sin B y sin C» | `items:[{text, ok:true\|false, at}]` |
+| `compare` | antes/después, mito/realidad | `compare:{left:{title, items[]}, right:{title, items[]}}` |
+| `quote` | una cita o frase fuerte | `quote:{text, author}` |
+| `chat` | mensajes, clientes, DM | `chat:{name, emoji, messages:[{from:'me'\|'them', text, at}]}` |
+| `browser` | web, enlace, tienda | `browser:{url, title, button, image}` (escribe la URL y hace clic) |
+| `terminal` | comandos, código, instalar | `terminal:{title, lines:[{text, kind:'cmd'\|'out', at}]}` |
+| `grid` | varias cosas a la vez (herramientas, funciones) | `grid:{items:[{emoji,label}], cols}` |
+| `meter` | porcentaje ≤ 100 («87 % de retención») | `meter:{value, label, suffix}` |
+| `rain` | dinero, celebración | `rain:{emoji, count, center}` |
+| `notifs` | avisos, ventas, alertas | `notifs:[{app, title, body, at}]` |
+| `rating` | reseñas, prueba social | `rating:{stars, score, label}` |
+| `image` | foto o captura del usuario a pantalla completa | `image:{src:'assets/x.png', zoom:0.12}` (Ken Burns) |
+| `clip` | clip de video del usuario | `clip:{src:'assets/x.mp4', start:0}` |
+
+Ejemplo: `{ "type":"insert", "layout":"chart", "bg":"mint", "from":7.8, "to":10.7, "chart":{"up":true,"label":"+312%"}, "lines":[{"small":"Resultados","at":7.9},{"gloss":"EN 3 MESES","at":8.2}] }`.
+Plan con **todos** los layouts para copiar: `python "SKILL_DIR/examples/catalog_plan.py" work` (genera `work/plan.json`; para `image` y `clip` pon `work/assets/catalog_image.png` y `catalog_clip.mp4`).
+
+**Regla de uso:** máximo ~1 B-roll cada 3 escenas; los números y las cifras (`stat`, `meter`) son lo más visual: úsalos siempre que el guion dé una cifra. `image` y `clip` solo si el usuario aporta material. No inventes datos: en `chart`, `stat` o `rating` usa solo cifras que el usuario dijo o te dio.
 
 ---
 ## Al entregar (todos los modos): explicar TODO

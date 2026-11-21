@@ -2,6 +2,7 @@
 import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, random, spring, staticFile, useCurrentFrame } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/BricolageGrotesque';
 import { Character, SetWall, SetProps, SetFloor } from './Character';
+import { BrollBody } from './Broll';
 
 const F = loadFont().fontFamily;
 export let FPS = 30; // se fija desde plan.fps en <Cg>
@@ -20,7 +21,7 @@ const glossFill = () => ({ backgroundImage: `linear-gradient(180deg, ${TH.dark} 
 const cw = (c) => (c === ' ' ? 0.3 : /[A-ZÁÉÍÓÚÑ0-9?¡!]/.test(c) ? 0.7 : 0.56); // ancho por carácter en em (mayúsculas más anchas)
 const fit = (text, maxW, maxSize) => Math.max(40, Math.min(maxSize, maxW / Math.max(...text.split('\n').map((l) => l.split('').reduce((a, c) => a + cw(c), 0)))));
 
-const Gloss = ({ text, at, until, size = 260, white }) => {
+const Gloss = ({ text, at, until, size = 260, white, bright }) => {
   const t = useT();
   const s = at - 0.1;
   if (t < s) return null;
@@ -32,7 +33,7 @@ const Gloss = ({ text, at, until, size = 260, white }) => {
       {text.split('').map((c, i) => {
         if (i >= n) return <span key={i} style={{ opacity: 0, whiteSpace: 'pre' }}>{c}</span>;
         const age = n - i;
-        return <span key={i} style={{ ...(white ? { color: '#fff', textShadow: `0 0 18px ${TH.soft}` } : glossFill()), filter: age < 3 ? `blur(${(3 - age) * 7}px)` : undefined, display: 'inline-block', whiteSpace: 'pre' }}>{c}</span>;
+        return <span key={i} style={{ ...(white ? { color: '#fff', textShadow: `0 0 18px ${TH.soft}` } : bright ? { ...glossFill(), backgroundImage: 'linear-gradient(180deg, #ff9a9a 0%, #ff4a4a 55%, #e61a1a 100%)', WebkitTextStroke: '2px #ffffff', paintOrder: 'stroke fill' } : glossFill()), filter: age < 3 ? `blur(${(3 - age) * 7}px)` : undefined, display: 'inline-block', whiteSpace: 'pre' }}>{c}</span>;
       })}
     </div>
   );
@@ -204,28 +205,14 @@ const InsertScene = ({ sc }) => {
   const t = useT();
   if (t < sc.from + 0.12 || t >= sc.to + 0.1) return null;
   const s = sc.from + 0.12;
-  const p = prog(t, s, s + 0.4), phoneIn = prog(t, s + 0.1, s + 0.55), out = prog(t, sc.to - 0.2, sc.to + 0.1);
+  const out = prog(t, sc.to - 0.2, sc.to + 0.1);
   const [c1, c2, c3] = BGS[sc.bg] || BGS.sky;
-  const obj = sc.object || {};
-  const bob = Math.sin(t * 2.2) * 10;
-  const lines = sc.lines || [];
   return (
     <AbsoluteFill style={{ background: `linear-gradient(180deg, ${c1} 0%, ${c2} 55%, ${c3} 100%)`, filter: `blur(${out * 50}px)`, opacity: 1 - out * 0.4 }}>
       {Array.from({ length: 16 }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, -100, 1000) + Math.sin(t * 0.6 + i) * 16, top: R(i + 30, 150, 1700), width: R(i + 60, 260, 520), height: R(i + 60, 200, 380), borderRadius: '50%', background: '#fff', opacity: R(i + 90, 0.18, 0.5), filter: 'blur(30px)' }} />)}
-      <div style={{ position: 'absolute', left: 140, top: 260, width: 800, height: 1100, borderRadius: 120, border: `9px solid ${TH.soft}`, background: 'linear-gradient(160deg, #ffffff50, #ffffff12)', transform: `translateY(${(1 - phoneIn) * -300}px)`, opacity: phoneIn, boxShadow: `0 0 40px ${TH.soft}55` }}>
-        <div style={{ position: 'absolute', left: 330, top: 28, width: 140, height: 34, borderRadius: 18, background: TH.accent }} />
-      </div>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 1000, display: 'flex', justifyContent: 'center', transform: `translateY(${(1 - p) * 500 + bob}px) scale(${0.9 + p * 0.1})`, filter: 'drop-shadow(0 30px 30px #0003)' }}>
-        {obj.image ? <Img src={staticFile(obj.image)} style={{ height: 760, objectFit: 'contain' }} /> : <div style={{ fontSize: 560, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
-      </div>
-      {(sc.stickers || []).map((e, i) => <div key={i} style={{ position: 'absolute', left: [40, 800, 80, 810][i % 4], top: [1060, 1100, 1500, 1480][i % 4], fontSize: 150, textShadow: stickerOutline, transform: `translate(${Math.sin(t * 2 + i) * 10}px, ${Math.cos(t * 2.4 + i) * 12}px) rotate(${-8 + i * 9 + Math.sin(t * 3) * 4}deg)`, opacity: phoneIn }}>{e}</div>)}
+      <BrollBody sc={sc} s={s} />
       <Halftone at={s} x={540} y={900} size={1500} />
       <Pixels at={s} x={90} y={210} /><Pixels at={s + 0.9} x={820} y={190} flip />
-      <div style={{ position: 'absolute', top: 400, width: 800, left: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
-        {lines.map((l, i) => l.gloss
-          ? <Gloss key={i} text={l.gloss} at={l.at} until={sc.to - 0.2} size={fit(l.gloss, 700, l.size ?? 160)} />
-          : <Small key={i} at={l.at} until={sc.to - 0.2} size={l.size ?? 60} white={['night', 'gold'].includes(sc.bg)}>{l.small}</Small>)}
-      </div>
     </AbsoluteFill>
   );
 };
@@ -399,3 +386,6 @@ export const Cg = ({ plan }) => {
     </AbsoluteFill>
   );
 };
+
+// Piezas compartidas con Broll.jsx (import circular: solo se usan al renderizar)
+export { Gloss, Small, Pill, Pixels, Halftone, useT, prog, R, fit, F, glossFill, TH, BGS, stickerOutline, clamp, EASE };

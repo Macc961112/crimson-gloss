@@ -1,5 +1,5 @@
 import { Composition } from 'remotion';
-import { Cg, FPS } from './Cg';
+import { Cg } from './Cg';
 
 const demo = { duration: 4, video: null, cutout: null, music: null, headTop: 780, scenes: [] };
 
@@ -9,9 +9,9 @@ export const Root = () => (
     component={Cg}
     width={1080}
     height={1920}
-    fps={FPS}
-    durationInFrames={FPS * demo.duration}
+    fps={30}
+    durationInFrames={30 * demo.duration}
     defaultProps={{ plan: demo }}
-    calculateMetadata={({ props }) => ({ durationInFrames: Math.ceil(props.plan.duration * FPS) })}
+    calculateMetadata={({ props }) => ({ durationInFrames: Math.ceil(props.plan.duration * (props.plan.fps ?? 30)), fps: props.plan.fps ?? 30 })}
   />
 );

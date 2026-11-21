@@ -1,0 +1,8 @@
+{
+  "accent": "#e10600",
+  "dark": "#7a0012",
+  "light": "#ff2a2a",
+  "ink": "#c8102e",
+  "set": "studio",
+  "character": { "outfit": "suit", "top": "#1d3a5c", "hairStyle": "quiff", "beard": "stubble", "glasses": true }
+}

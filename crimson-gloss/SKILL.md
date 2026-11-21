@@ -1,19 +1,20 @@
 ---
 name: crimson-gloss
-description: Edita el video de una persona hablando a cámara (vertical 9:16) de forma automática y explicada. Dos modos — NORMAL (limpio y rápido - corta silencios, subtítulos palabra a palabra, zooms de énfasis, rótulo con nombre, llamada a la acción, música baja y volumen -14 LUFS) y CRIMSON (estilo "Crimson Gloss" - texto rojo cristal 3D al ritmo de la voz, tarjetas y cintas que salen por detrás de la persona, píxeles, halftone y escenas inserto que ilustran lo que se dice). Usar cuando el usuario dé un video suyo y pida "edítalo", "ponle subtítulos", "quítale los silencios", "hazlo estilo crimson / tipo crimson / crimson gloss", "texto rojo 3D alrededor mío", "edítalo como el reel de nikhilmotion", o /crimson-gloss.
+description: Edita el video de una persona hablando a cámara (vertical 9:16) de forma automática y explicada. Tres modos — NORMAL (limpio y rápido - corta silencios, subtítulos palabra a palabra, zooms de énfasis, rótulo con nombre, llamada a la acción, música baja y volumen -14 LUFS), PERSONAJE (sin video - un presentador animado por código con sincronía labial, gestos y cámara, a partir de un guion o una voz) y CRIMSON (estilo "Crimson Gloss" - texto rojo cristal 3D al ritmo de la voz, tarjetas y cintas que salen por detrás de la persona, píxeles, halftone y escenas inserto que ilustran lo que se dice). Usar cuando el usuario dé un video suyo o un guion/idea y pida "edítalo", "ponle subtítulos", "quítale los silencios", "hazlo estilo crimson / tipo crimson / crimson gloss", "texto rojo 3D alrededor mío", "edítalo como el reel de nikhilmotion", "hazme un video sobre X con un muñeco / personaje / presentador animado", "video sin cámara", o /crimson-gloss.
 ---
 
-# Crimson Gloss (modo normal + modo crimson)
+# Crimson Gloss (modo normal + modo crimson + modo personaje)
 
-El usuario entrega **un video suyo hablando a cámara**. Tú lo conviertes en un reel terminado y **le explicas todo lo que se hizo y por qué**. Referencia visual completa del estilo Crimson: `reference/style.md`. Documentación para humanos: `docs/COMO_FUNCIONA.md`.
+El usuario entrega **un video suyo hablando a cámara** (modos normal y crimson) **o solo un guion/idea/voz** (modo personaje). Tú lo conviertes en un reel terminado y **le explicas todo lo que se hizo y por qué**. Referencia visual completa del estilo Crimson: `reference/style.md`. Documentación para humanos: `docs/COMO_FUNCIONA.md`.
 
-`SKILL_DIR` = carpeta de este archivo. Usa el Python que tenga `faster-whisper` y `numpy` (en Windows: `python`). Trabaja siempre en una carpeta `work/` junto al video del usuario, nunca dentro de `SKILL_DIR`. Requisitos: Python 3.10+, Node 18+, ffmpeg. La primera ejecución instala Remotion en `~/.crimson-gloss/runtime` (1–2 min, una sola vez).
+`SKILL_DIR` = carpeta de este archivo. Usa el Python que tenga `faster-whisper` y `numpy` (en Windows: `python`). Trabaja siempre en una carpeta `work/` junto al video del usuario, nunca dentro de `SKILL_DIR`. Requisitos: Python 3.10+, Node 18+, ffmpeg; modo personaje además `edge-tts` (`pip install edge-tts`). La primera ejecución instala Remotion en `~/.crimson-gloss/runtime` (1–2 min, una sola vez).
 
 ## 0. Elegir el modo
 | Si el usuario pide… | Modo |
 |---|---|
 | "edítalo", "subtítulos", "quita los silencios", "déjalo listo para redes" (sin mencionar estilo) | **normal** |
-| "estilo crimson", "tipo crimson", "texto rojo 3D", "como el reel de nikhilmotion" | **crimson** |
+| "estilo crimson", "tipo crimson", "texto rojo 3D", "como el reel de nikhilmotion" (con su video) | **crimson** |
+| NO hay video: "hazme un video sobre…", "con un muñeco / personaje / avatar", "sin cámara", da un guion o una voz | **personaje** |
 Si no está claro, **normal** y ofrécele crimson al final. Ambos usan el mismo motor y se pueden mezclar (subtítulos dentro de un plan crimson, si lo pide).
 
 ---
@@ -94,11 +95,35 @@ python "SKILL_DIR/scripts/render.py" work --out final.mp4
 Mira especialmente: texto cortado, tarjetas sobre la cara, inserto ilustrando la idea correcta, nada que no se diga.
 
 ---
-## Al entregar (los dos modos): explicar TODO
+## MODO PERSONAJE — sin cámara: un presentador animado por código
+Para quien no tiene video: parte de **un guion** (o una voz grabada) y produce el reel completo con un personaje 2D hecho en código. Como las capas son nuestras, las tarjetas y cintas salen **siempre por detrás** del personaje (no hace falta fondo liso).
+
+### Qué anima el personaje (todo automático)
+- **Sincronía labial por visemas**: cada palabra se convierte en formas de boca (A, E, I, O, U, M/B/P, F/V…) con sus tiempos reales. No es una boca que se abre al azar.
+- **Vida**: parpadeo irregular, mirada, respiración, balanceo, cabeceo en comas y puntos, cejas que suben en cada palabra clave.
+- **Gestos de brazos y manos** con cinemática (hombro-codo-muñeca): `open`, `point`, `count` (1–5 dedos), `chop`, `shrug`, `wave`. Se eligen solos: números → cuenta con los dedos, «tú» → señala, «hola» → saluda, «no/nunca» → encoge los hombros, palabra clave → gesto de énfasis.
+- **Cámara**: tomas por escena (`zoom` 1.0–1.15; evita valores >1.2 con texto `top`), empuje lento, parallax entre pared/props/personaje.
+- **Set**: `studio` (claro) o `night` (azul con luces desenfocadas); lámpara, planta, alfombra con tu color de acento.
+
+### Flujo
+```
+python "SKILL_DIR/scripts/character.py" init work --script-file guion.txt [--voice es-MX-JorgeNeural] [--rate +6%]     # o --audio voz.mp3
+python "SKILL_DIR/scripts/character.py" plan work --look "hombre 30 años, barba, gafas, sudadera roja" [--brand brand.json] [--set studio|night] [--cta "Síguenos"] [--captions] [--fps 60]
+python "SKILL_DIR/scripts/render.py" work --still 1 5 10 20            # revisar
+python "SKILL_DIR/scripts/render.py" work --out final.mp4 --format both  # 9:16 + 1:1 + subtitulos.srt + informe.md
+```
+1. **Si el usuario solo da una idea** («hazme un video sobre X»): **escribe tú el guion** (25–60 s; frases cortas; gancho en la primera frase; una idea por frase; datos concretos; cierre con llamada a la acción) y **muéstraselo antes de generar la voz**.
+2. **`init`** genera `voice.mp3` con `edge-tts` (voces: `es-MX-JorgeNeural`, `es-ES-AlvaroNeural`, `es-AR-TomasNeural` hombre; `es-MX-DaliaNeural`, `es-ES-ElviraNeural` mujer; ajusta `--rate`). **Avisa al usuario:** `edge-tts` envía el **texto** del guion a Microsoft para sintetizarlo; con `--audio` y su propia voz no se envía nada (la transcripción es local).
+3. **`plan`** escribe `plan.json` con escenas automáticas guiadas por el guion (palabra clave gigante + emoji que la ilustra + insertos cada ~4 escenas), gestos y apariencia. `--look` entiende: hombre/mujer, barba (corta), gafas, calvo/tupé/largo/moño, traje/sudadera/camiseta (+ color), piel clara/morena/oscura, rubio/pelirrojo/canoso. Para control total: `--character c.json` con `{skin, hair, hairStyle(short|quiff|long|bun|bald), beard(none|stubble|full), glasses, top, outfit(hoodie|tee|suit), pants, shoes, chair, tie, lips, eyes}`. `--brand brand.json` fija colores (`accent`, `dark`, `light`, `ink`…), `set` y `character` de la marca.
+4. **Revisa y mejora `plan.json` con criterio** — la heurística acierta bastante pero no entiende todo: ¿la palabra gigante es la importante de la frase?, ¿el emoji ilustra la idea (p. ej. «estudio» sale 📚 pero puede ser 🎙️)?, ¿hay demasiados o pocos insertos?, ¿falta un gesto en el dato clave? Edita `scenes[]` y `character.gestures[]` (`{at, dur, kind, n}`) a mano. Las escenas siguen el mismo esquema que el modo crimson (abajo).
+5. **Renderiza**: primero `--still`, luego el final. `render.py` avisa del *lint* (textos que se pisan, escenas largas). `--fps 60` para movimiento más suave (render 2× más lento); `--format both` añade el cuadrado 1:1.
+
+---
+## Al entregar (todos los modos): explicar TODO
 1. Lee `work/informe.md` (lo escribe `render.py`) y **cuéntaselo al usuario en lenguaje llano**: cuánto se acortó y por qué, qué subtítulos/zooms/escenas se pusieron y en qué segundos, qué se corrigió de la transcripción, cómo se ajustó el audio.
 2. Dile cómo cambiar algo: editar `plan.json` y volver a ejecutar `render.py` (no hace falta repetir `prepare.py`).
 3. Termina con lo que **no** pudiste comprobar (p. ej. no oíste el resultado entero, el recorte no probado en ropa blanca).
-4. Si usaste modo normal, ofrece el estilo crimson; si usaste crimson, ofrece subtítulos.
+4. Si usaste modo normal, ofrece el estilo crimson; si usaste crimson, ofrece subtítulos; si usaste personaje, ofrece cambiar apariencia, set (`night`) o versión 1:1.
 
 ## Si algo falla
 - `plan inválido`: `render.py` indica escena/elemento; corrige tiempos.
@@ -111,4 +136,4 @@ Mira especialmente: texto cortado, tarjetas sobre la cara, inserto ilustrando la
 - Los emojis usan la fuente del sistema; para calidad máxima pide imágenes en `work/assets/`.
 
 ## Probado / no probado
-Probado en Windows con un clip limpio de presentador (español, 18 s): transcripción local, corte de silencios, recorte por fondo liso, render completo en ambos modos. **No probado con un video real filmado por el usuario**: el recorte por color puede dejar huecos en ropa blanca.
+Probado en Windows: clip limpio de presentador (español, 18 s) en modos normal y crimson; video real de 93 s (selfie oscuro) en modo crimson; modo personaje de punta a punta desde un guion de 30 s. **No probado con un video real filmado por el usuario**: el recorte por color puede dejar huecos en ropa blanca.

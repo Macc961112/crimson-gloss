@@ -1,9 +1,10 @@
 // Crimson Gloss: plantilla guiada por datos. Todo sale de `plan` (ver SKILL.md).
 import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, random, spring, staticFile, useCurrentFrame } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/BricolageGrotesque';
+import { Character, SetWall, SetProps, SetFloor } from './Character';
 
 const F = loadFont().fontFamily;
-export const FPS = 30;
+export let FPS = 30; // se fija desde plan.fps en <Cg>
 const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' };
 const EASE = Easing.bezier(0.16, 1, 0.3, 1);
 const useT = () => useCurrentFrame() / FPS;
@@ -132,10 +133,10 @@ const slots = (ht) => ({
   pill: { left: { x: 70, y: 540 }, right: { r: 70, y: 540 }, url: { x: 60, y: 1650 } },
   card: {
     aboveHead: { x: 375, y: ht - 330, w: 330, h: 470, rot: 0, from: [0, 360] },
-    left1: { x: 90, y: 880, w: 190, h: 330, rot: -6, from: [330, 140] },
+    left1: { x: 90, y: ht + 100, w: 190, h: 330, rot: -6, from: [330, 140] },
     left2: { x: 70, y: 1030, w: 210, h: 360, rot: 4, from: [340, 60] },
     left3: { x: 190, y: 1230, w: 300, h: 400, rot: -3, from: [330, -80] },
-    right1: { x: 560, y: ht - 180, w: 270, h: 340, rot: 6, from: [-150, 420] },
+    right1: { x: 775, y: ht + 40, w: 240, h: 300, rot: 6, from: [-260, 300] },
     right2: { x: 620, y: 640, w: 310, h: 520, rot: 5, from: [-250, 470] },
   },
 });
@@ -180,14 +181,14 @@ const Element = ({ el, sc, ht, layer, hasCutout }) => {
 const PresenterScene = ({ sc, plan, layer }) => {
   const t = useT();
   if (t < sc.from || t >= sc.to + 0.3) return null;
-  const ht = 1920 - (1920 - (plan.headTop ?? 780)) * (sc.zoom ?? 1); // la cabeza baja cuando se aleja el video
+  const ht = 1920 - (1920 - (plan.headTop ?? (plan.character ? 718 : 780))) * zoomOf(sc); // la cabeza baja cuando se aleja el video
   const els = sc.elements || [];
   return (
     <>
       {layer === 'back' && sc.halo !== false && <Halftone at={sc.from} x={540} y={ht + 220} size={1100} />}
-      {layer === 'back' && sc.from > 0.5 && plan.cutout && <Ribbon at={sc.from - 0.55} d={`M-60 ${(plan.floorY ?? 1580) + 30} C 300 ${(plan.floorY ?? 1580) - 70} 700 ${(plan.floorY ?? 1580) + 110} 1140 ${(plan.floorY ?? 1580) - 10}`} />}
+      {layer === 'back' && sc.from > 0.5 && (plan.cutout || plan.character) && <Ribbon at={sc.from - 0.55} d={`M-60 ${(plan.floorY ?? 1580) + 30} C 300 ${(plan.floorY ?? 1580) - 70} 700 ${(plan.floorY ?? 1580) + 110} 1140 ${(plan.floorY ?? 1580) - 10}`} />}
       {layer === 'front' && els.length > 0 && <Pixels at={els[0].at - 0.12} x={sc.pixelX ?? 140} y={sc.pixelY ?? 220} />}
-      {els.map((el, i) => <Element key={i} el={el} sc={sc} ht={ht} layer={layer} hasCutout={!!plan.cutout} />)}
+      {els.map((el, i) => <Element key={i} el={el} sc={sc} ht={ht} layer={layer} hasCutout={!!(plan.cutout || plan.character)} />)}
     </>
   );
 };
@@ -223,7 +224,7 @@ const InsertScene = ({ sc }) => {
       <div style={{ position: 'absolute', top: 400, width: 800, left: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
         {lines.map((l, i) => l.gloss
           ? <Gloss key={i} text={l.gloss} at={l.at} until={sc.to - 0.2} size={fit(l.gloss, 700, l.size ?? 160)} />
-          : <Small key={i} at={l.at} until={sc.to - 0.2} size={l.size ?? 60}>{l.small}</Small>)}
+          : <Small key={i} at={l.at} until={sc.to - 0.2} size={l.size ?? 60} white={['night', 'gold'].includes(sc.bg)}>{l.small}</Small>)}
       </div>
     </AbsoluteFill>
   );
@@ -244,10 +245,12 @@ const Flash = ({ cuts }) => {
   return <AbsoluteFill style={{ background: '#fff', opacity: k * 0.95, pointerEvents: 'none' }} />;
 };
 
+const SHOT = { wide: 0.92, medium: 1, close: 1.3 }; // tomas de cámara
+const zoomOf = (sc) => sc.zoom ?? SHOT[sc.shot] ?? 1;
 const zoomAt = (plan, t) => {
   const list = (plan.scenes || []).filter((x) => x.type !== 'insert');
   let cur = 1, prev = 1;
-  for (const sc of list) if (sc.from <= t) { prev = cur; cur = sc.zoom ?? 1; }
+  for (const sc of list) if (sc.from <= t) { prev = cur; cur = zoomOf(sc); }
   const sc = list.filter((x) => x.from <= t).pop();
   return sc ? interpolate(prog(t, sc.from, sc.from + 0.45, Easing.inOut(Easing.cubic)), [0, 1], [prev, cur]) : 1;
 };
@@ -327,23 +330,59 @@ const Cta = ({ cfg }) => {
   );
 };
 
+// --- Modo personaje: cámara con parallax, personaje y música con ducking ---------------
+const Stage = ({ plan, depth = 1, children }) => {
+  const t = useT();
+  const z = 1 + (zoomAt(plan, t) - 1) * depth;
+  const sc = (plan.scenes || []).find((x) => x.type !== 'insert' && t >= x.from && t < x.to);
+  const drift = sc ? 0.03 * prog(t, sc.from, sc.to, Easing.linear) : 0; // empuje lento de cámara
+  return (
+    <AbsoluteFill style={{ transformOrigin: '50% 100%', transform: `scale(${z * (1 + drift * depth)})` }}>
+      <AbsoluteFill style={{ transformOrigin: '50% 38%', transform: `scale(${1 + (punchAt(plan, t) - 1) * depth})` }}>{children}</AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+const CharacterLayer = ({ plan }) => {
+  const t = useT();
+  const ch = plan.character;
+  const emph = (plan.scenes || []).flatMap((s) => (s.elements || []).filter((e) => e.kind === 'gloss').map((e) => e.at)).concat(ch.emph || []);
+  return <div style={{ position: 'absolute', left: 170, top: 640 }}><Character cfg={ch.cfg} t={t} words={ch.words || []} gestures={ch.gestures || []} emph={emph} W={740} /></div>;
+};
+
+const speechSpans = (words) => {
+  const out = [];
+  for (const w of words) { const l = out[out.length - 1]; if (l && w.s - l[1] < 0.6) l[1] = w.e; else out.push([w.s, w.e]); }
+  return out;
+};
+const duck = (t, spans, base) => {
+  let k = 0;
+  for (const [s, e] of spans) { const d = t < s ? s - t : t > e ? t - e : 0; k = Math.max(k, 1 - Math.min(1, d / 0.25)); }
+  return base * (1 - 0.62 * k);
+};
+
 const sfx = (src, at, vol, dur, key) => <Sequence key={key} from={Math.max(0, Math.round(at * FPS))} durationInFrames={dur}><Audio src={staticFile(src)} volume={vol} /></Sequence>;
 
 export const Cg = ({ plan }) => {
+  FPS = plan.fps ?? 30;
   TH = { ...DEFAULT_TH, ...(plan.theme || {}) };
+  const speechWords = plan.character?.words || plan.captions?.words || [];
+  const spans = plan.speech || speechSpans(speechWords);
   const t = useT();
   const scenes = plan.scenes || [];
   const cuts = scenes.slice(1).map((s) => s.from);
   const inserts = scenes.filter((s) => s.type === 'insert');
   const flashes = inserts.flatMap((s) => [s.from + 0.12, s.to + 0.1]);
-  const gray = plan.introFade === false ? 0 : 1 - prog(t, 0, 0.35, Easing.linear);
+  const gray = (plan.introFade === false || plan.character) ? 0 : 1 - prog(t, 0, 0.35, Easing.linear);
   const layerScenes = (layer) => scenes.filter((s) => s.type !== 'insert').map((s, i) => <PresenterScene key={i} sc={s} plan={plan} layer={layer} />);
   return (
     <AbsoluteFill style={{ background: Array.isArray(plan.bg) ? `linear-gradient(180deg, ${plan.bg[0]}, ${plan.bg[1]})` : TH.bg }}>
       <BlurMask cuts={cuts}>
-        {plan.video ? <PersonVideo plan={plan} src={plan.video} /> : null}
+        {plan.character
+          ? <><Stage plan={plan} depth={0.5}><SetWall set={plan.set} t={t} accent={TH.accent} /></Stage><Stage plan={plan} depth={0.8}><SetProps set={plan.set} t={t} accent={TH.accent} /></Stage><Stage plan={plan} depth={1}><SetFloor set={plan.set} accent={TH.accent} /></Stage></>
+          : plan.video ? <PersonVideo plan={plan} src={plan.video} /> : null}
         {layerScenes('back')}
-        {plan.cutout ? <PersonVideo plan={plan} src={plan.cutout} transparent /> : null}
+        {plan.character ? <Stage plan={plan} depth={1}><CharacterLayer plan={plan} /></Stage> : plan.cutout ? <PersonVideo plan={plan} src={plan.cutout} transparent /> : null}
         {layerScenes('front')}
         {inserts.map((s, i) => <InsertScene key={i} sc={s} />)}
         <AbsoluteFill style={{ background: '#8c8c94', opacity: gray * 0.85 }} />
@@ -352,7 +391,8 @@ export const Cg = ({ plan }) => {
       {plan.lower && <Lower cfg={plan.lower} />}
       {plan.cta && <Cta cfg={plan.cta} />}
       <Flash cuts={flashes} />
-      {plan.music && <Audio src={staticFile(plan.music)} volume={plan.musicVolume ?? 0.08} />}
+      {plan.voice && <Audio src={staticFile(plan.voice)} />}
+      {plan.music && <Audio src={staticFile(plan.music)} volume={(f) => duck(f / FPS, spans, plan.musicVolume ?? 0.08)} />}
       {cuts.map((c, i) => sfx('whoosh.wav', c - 0.12, 0.45, 16, 'w' + i))}
       {scenes.flatMap((sc, i) => (sc.elements || []).filter((e) => e.kind === 'gloss').map((e, j) => sfx('pop.wav', e.at - 0.1, 0.3, 5, `g${i}_${j}`)))}
       {scenes.map((sc, i) => (sc.elements?.length ? sfx('click.wav', sc.elements[0].at - 0.15, 0.4, 3, 'k' + i) : null))}

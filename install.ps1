@@ -12,6 +12,6 @@ New-Item -ItemType Directory (Split-Path $dest) -Force | Out-Null
 Copy-Item "$tmp\crimson-gloss-main\crimson-gloss" $dest -Recurse
 $missing = @('python', 'node', 'ffmpeg') | Where-Object { -not (Get-Command $_ -ErrorAction SilentlyContinue) }
 if ($missing) { Write-Warning ("Te faltan: " + ($missing -join ', ') + ". Instálalos y vuelve a ejecutar.") }
-else { python -m pip install --quiet faster-whisper numpy }
+else { python -m pip install --quiet faster-whisper numpy edge-tts }
 Remove-Item $tmp -Recurse -Force
 Write-Host "Listo: $dest. Reinicia Claude Code y escribe: /crimson-gloss"

@@ -1,8 +1,8 @@
 # Crimson Gloss — skill para Claude Code
 
-Dale a Claude Code **un video tuyo hablando a cámara** y te devuelve el reel **ya editado**, con un informe que te explica **todo lo que hizo y por qué**.
+Dale a Claude Code **un video tuyo hablando a cámara** —o solo **un guion**— y te devuelve el reel **ya editado**, con un informe que te explica **todo lo que hizo y por qué**.
 
-Tiene dos modos:
+Tiene tres modos:
 
 | | **Normal** | **Crimson** |
 |---|---|---|
@@ -10,6 +10,11 @@ Tiene dos modos:
 | Quién lo decide | Todo automático (3 comandos) | Claude diseña las escenas **a partir de lo que dices** |
 | Qué hace | Corta silencios · subtítulos palabra a palabra · zooms de énfasis · rótulo con tu nombre · llamada a la acción · música baja · volumen -14 LUFS | Texto rojo cristal 3D al ritmo de la voz · tarjetas y cintas que salen **por detrás de ti** · píxeles y halftone · escenas inserto que ilustran lo que dices |
 | Demo | ![normal](docs/demo-normal.gif) | ![crimson](docs/demo-crimson.gif) |
+
+### Modo personaje (sin cámara)
+Solo un **guion** (o tu voz) → un presentador **animado por código**: sincronía labial por visemas, parpadeo, mirada, respiración, **gestos de brazos y manos** (contar con los dedos, señalar, saludar…), cámara con parallax, set con lámpara/planta, y todo el estilo Crimson con tarjetas que salen **por detrás** del personaje. Escenas guiadas por lo que dice el guion (palabra clave + emoji que la ilustra), 1:1 + SRT y volumen -14 LUFS.
+
+![personaje](docs/demo-personaje.gif)
 
 > Las demos usan un presentador dibujado con código (no una persona real) para no usar material de nadie. Con tu video, la persona eres tú.
 
@@ -34,11 +39,12 @@ Instalación manual: copia la carpeta [`crimson-gloss/`](crimson-gloss) a `~/.cl
 En Claude Code, dale la ruta de tu video:
 
 - `Edítame este video: C:\videos\yo.mp4` → modo **normal**
+- `Hazme un video de 40 s sobre cómo ahorrar, con un muñeco animado` → modo **personaje** (escribe el guion, la voz y el video)
 - `Ponle subtítulos y quítale los silencios` → modo **normal**
 - `Hazlo estilo crimson` / `tipo crimson` → modo **crimson**
 - `/crimson-gloss C:\videos\yo.mp4`
 
-Claude hace el resto: prepara el video, planifica, **te enseña unos fotogramas de prueba**, renderiza y te **explica todo** con `informe.md`. Para cambiar algo, se edita `plan.json` y se vuelve a renderizar (no hace falta repetir todo).
+Claude hace el resto: prepara el video (o escribe el guion y la voz), planifica, **te enseña unos fotogramas de prueba**, renderiza y te **explica todo** con `informe.md`. Para cambiar algo, se edita `plan.json` y se vuelve a renderizar (no hace falta repetir todo).
 
 **Mejor resultado:** graba en vertical, con buena voz y poco ruido. Para el modo Crimson, **fondo blanco o liso**: así las tarjetas pueden salir por detrás de ti.
 
@@ -58,12 +64,13 @@ Claude hace el resto: prepara el video, planifica, **te enseña unos fotogramas 
 Explicación completa, esquema de `plan.json`, posiciones y solución de problemas: [docs/COMO_FUNCIONA.md](docs/COMO_FUNCIONA.md).
 
 ## Privacidad
-La transcripción es **local**: tu audio no se sube a ningún servicio. Todo el render ocurre en tu ordenador.
+La transcripción es **local**: tu audio no se sube a ningún servicio. Todo el render ocurre en tu ordenador. **Excepción:** en modo personaje la voz sintética (`edge-tts`) envía el **texto** del guion a Microsoft; si no quieres eso, graba tu voz y usa `--audio`.
 
 ## Límites (honestos)
 - Probado en **Windows** con un clip limpio en español. **No probado todavía con un video real filmado**: el recorte por color puede dejar huecos si llevas ropa del mismo color que el fondo.
 - La transcripción local (`small`) se equivoca con **marcas y nombres propios**; Claude las corrige leyendo el contexto (y te pregunta si duda). Opción `--model medium` para más precisión.
 - Sin fondo liso, en modo Crimson las tarjetas van **por delante** de ti, no por detrás.
+- El personaje es **2D ilustrado**: nunca se verá como una persona filmada ni como video de IA realista.
 - Los emojis de las escenas usan la fuente del sistema. Para la mejor calidad, dale imágenes propias.
 - La primera vez instala Remotion (1–2 min) y descarga el modelo de voz.
 
@@ -73,8 +80,10 @@ crimson-gloss/
   SKILL.md            instrucciones que sigue Claude (los dos modos)
   scripts/prepare.py  video → input.mp4 + transcripción + (corte de silencios | recorte)
   scripts/autoplan.py modo normal: plan automático
+  scripts/character.py modo personaje: voz + escenas automáticas + gestos + apariencia
+  scripts/lexicon.py  palabra clave → emoji
   scripts/render.py   plan → final.mp4 + informe.md
-  template/           proyecto Remotion (Cg.jsx = todo el estilo)
+  template/           proyecto Remotion (Cg.jsx = estilo y cámara; Character.jsx = el personaje y el set)
   reference/style.md  análisis del estilo Crimson Gloss
   examples/           plan.example.json
 docs/COMO_FUNCIONA.md documentación completa

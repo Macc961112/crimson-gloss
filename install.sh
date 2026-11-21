@@ -10,5 +10,5 @@ cp -r "$TMP/crimson-gloss-main/crimson-gloss" "$DEST"
 rm -rf "$TMP"
 missing=""
 for c in python3 node ffmpeg; do command -v "$c" >/dev/null || missing="$missing $c"; done
-if [ -n "$missing" ]; then echo "Te faltan:$missing. Instálalos y vuelve a ejecutar."; else python3 -m pip install --quiet faster-whisper numpy; fi
+if [ -n "$missing" ]; then echo "Te faltan:$missing. Instálalos y vuelve a ejecutar."; else python3 -m pip install --quiet faster-whisper numpy edge-tts; fi
 echo "Listo: $DEST. Reinicia Claude Code y escribe: /crimson-gloss"

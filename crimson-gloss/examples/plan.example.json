@@ -1,0 +1,38 @@
+{
+  "duration": 17.77, "video": "input.mp4", "cutout": "cutout.webm", "music": "music.wav", "musicVolume": 0.06,
+  "headTop": 780, "floorY": 1680,
+  "scenes": [
+    { "type": "presenter", "from": 0, "to": 1.7, "elements": [
+      { "kind": "small", "slot": "lead", "text": "Mi nombre es", "at": 0.05 },
+      { "kind": "gloss", "slot": "aboveHead", "text": "MACC", "at": 0.76 } ] },
+    { "type": "presenter", "from": 1.7, "to": 3.8, "zoom": 0.86, "elements": [
+      { "kind": "card", "slot": "aboveHead", "at": 1.9, "content": { "emoji": "👨‍💼" } },
+      { "kind": "gloss", "slot": "top", "text": "CEO", "at": 2.32 },
+      { "kind": "pill", "slot": "left", "text": "de", "at": 2.54 },
+      { "kind": "pill", "slot": "right", "text": "Video", "at": 2.78 },
+      { "kind": "gloss", "slot": "bottom", "text": "Studio", "at": 3.1 } ] },
+    { "type": "presenter", "from": 3.8, "to": 6.2, "zoom": 0.9, "elements": [
+      { "kind": "small", "slot": "tl", "text": "El", "at": 3.84 },
+      { "kind": "small", "slot": "tr", "text": "para Claude", "at": 4.72 },
+      { "kind": "gloss", "slot": "top", "text": "Estudio", "at": 3.94 },
+      { "kind": "gloss", "slot": "second", "text": "de Video", "at": 4.22 },
+      { "kind": "card", "slot": "left1", "at": 4.0, "content": { "emoji": "🎬" } },
+      { "kind": "card", "slot": "left2", "at": 4.5, "content": { "emoji": "✂️" } },
+      { "kind": "card", "slot": "left3", "at": 4.98, "content": { "text": "42\nSKILLS" } } ] },
+    { "type": "insert", "from": 6.2, "to": 10.0, "bg": "mint", "object": { "emoji": "🎞️" }, "stickers": ["✂️", "🎬", "✨"], "lines": [
+      { "small": "Hoy tienes", "at": 6.34, "size": 64 }, { "gloss": "42 SKILLS", "at": 6.84 },
+      { "small": "listas para", "at": 8.2, "size": 52 }, { "gloss": "EDITAR", "at": 8.44 }, { "gloss": "VIDEOS", "at": 8.76 } ] },
+    { "type": "presenter", "from": 10.0, "to": 14.6, "elements": [
+      { "kind": "small", "slot": "tl", "text": "¿Quién puede crear tus", "at": 10.12 },
+      { "kind": "gloss", "slot": "top", "text": "REELS?", "at": 11.1 },
+      { "kind": "card", "slot": "right1", "at": 12.34, "label": "tú", "icon": "headphones", "content": { "emoji": "🧑‍💻" } },
+      { "kind": "small", "slot": "bottom", "text": "con un solo", "at": 12.96, "size": 54 },
+      { "kind": "gloss", "slot": "footer", "text": "COMANDO", "at": 13.4, "align": "center" } ] },
+    { "type": "presenter", "from": 14.6, "to": 17.77, "elements": [
+      { "kind": "small", "slot": "tl", "text": "Entra al", "at": 14.74, "size": 56 },
+      { "kind": "gloss", "slot": "top", "text": "ENLACE", "at": 15.28 },
+      { "kind": "small", "slot": "sub", "text": "y pruébalo hoy", "at": 15.54, "size": 52 },
+      { "kind": "card", "slot": "right2", "at": 15.3, "content": { "image": "assets/site.png" } },
+      { "kind": "pill", "slot": "url", "text": "macc961112.github.io/video-studio", "at": 15.4, "size": 38 } ] }
+  ]
+}

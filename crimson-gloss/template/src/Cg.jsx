@@ -1,0 +1,360 @@
+// Crimson Gloss: plantilla guiada por datos. Todo sale de `plan` (ver SKILL.md).
+import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, random, spring, staticFile, useCurrentFrame } from 'remotion';
+import { loadFont } from '@remotion/google-fonts/BricolageGrotesque';
+
+const F = loadFont().fontFamily;
+export const FPS = 30;
+const clamp = { extrapolateLeft: 'clamp', extrapolateRight: 'clamp' };
+const EASE = Easing.bezier(0.16, 1, 0.3, 1);
+const useT = () => useCurrentFrame() / FPS;
+const prog = (t, a, b, e = EASE) => interpolate(t, [a, b], [0, 1], { ...clamp, easing: e });
+const R = (s, lo = 0, hi = 1) => lo + random(s) * (hi - lo);
+
+const DEFAULT_TH = { accent: '#e10600', dark: '#7a0012', light: '#ff2a2a', soft: '#ff9aa8', bg: '#ececf0', ink: '#c8102e' };
+let TH = DEFAULT_TH; // se fija al renderizar <Cg>
+
+// --- Texto -------------------------------------------------------------------
+const glossFill = () => ({ backgroundImage: `linear-gradient(180deg, ${TH.dark} 0%, #d0000f 45%, ${TH.light} 100%)`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' });
+const cw = (c) => (c === ' ' ? 0.3 : /[A-ZÁÉÍÓÚÑ0-9?¡!]/.test(c) ? 0.7 : 0.56); // ancho por carácter en em (mayúsculas más anchas)
+const fit = (text, maxW, maxSize) => Math.max(40, Math.min(maxSize, maxW / Math.max(...text.split('\n').map((l) => l.split('').reduce((a, c) => a + cw(c), 0)))));
+
+const Gloss = ({ text, at, until, size = 260, white }) => {
+  const t = useT();
+  const s = at - 0.1;
+  if (t < s) return null;
+  const out = until === undefined ? 0 : prog(t, until, until + 0.28, Easing.in(Easing.cubic));
+  if (out >= 1) return null;
+  const n = Math.floor((t - s) * 30 / 1.6);
+  return (
+    <div style={{ display: 'inline-block', fontFamily: F, fontWeight: 800, fontSize: size, lineHeight: 0.9, letterSpacing: '-0.05em', whiteSpace: 'nowrap', transform: `skewX(-9deg) scaleX(${1 + out * 0.5}) translateX(${out * 160}px)`, filter: `blur(${out * 40}px) drop-shadow(0 10px 14px ${TH.dark}3d)`, opacity: 1 - out * 0.9 }}>
+      {text.split('').map((c, i) => {
+        if (i >= n) return <span key={i} style={{ opacity: 0, whiteSpace: 'pre' }}>{c}</span>;
+        const age = n - i;
+        return <span key={i} style={{ ...(white ? { color: '#fff', textShadow: `0 0 18px ${TH.soft}` } : glossFill()), filter: age < 3 ? `blur(${(3 - age) * 7}px)` : undefined, display: 'inline-block', whiteSpace: 'pre' }}>{c}</span>;
+      })}
+    </div>
+  );
+};
+
+const Small = ({ children, at, until, size = 44, white }) => {
+  const t = useT();
+  if (t < at - 0.1) return null;
+  const p = prog(t, at - 0.1, at + 0.2), out = until === undefined ? 0 : prog(t, until, until + 0.2);
+  if (out >= 1) return null;
+  return <div style={{ fontFamily: F, fontWeight: 500, fontStyle: 'italic', fontSize: size, color: white ? '#fff' : TH.ink, letterSpacing: '-0.04em', textShadow: white ? `0 0 14px ${TH.soft}` : undefined, opacity: p * (1 - out), filter: `blur(${(1 - p) * 8 + out * 14}px)`, transform: `translateY(${(1 - p) * 20}px) skewX(-8deg)`, whiteSpace: 'nowrap' }}>{children}</div>;
+};
+
+const Pill = ({ children, at, until, size = 44 }) => {
+  const t = useT();
+  if (t < at - 0.1) return null;
+  const sp = spring({ frame: Math.round((t - at + 0.1) * FPS), fps: FPS, config: { damping: 14 } });
+  const out = until === undefined ? 0 : prog(t, until, until + 0.2);
+  if (out >= 1) return null;
+  return <div style={{ background: TH.accent, color: '#fff', fontFamily: F, fontWeight: 600, fontStyle: 'italic', fontSize: size, letterSpacing: '-0.04em', padding: '2px 22px 6px', borderRadius: 10, transform: `scale(${sp}) skewX(-8deg)`, opacity: 1 - out, boxShadow: `0 6px 14px ${TH.accent}44`, whiteSpace: 'nowrap' }}>{children}</div>;
+};
+
+// --- Efectos -----------------------------------------------------------------
+const Pixels = ({ at, x, y, flip }) => {
+  const t = useT();
+  const dt = t - at;
+  if (dt < 0 || dt > 0.45) return null;
+  return <>{[[0, 0], [1, 0], [2, 0], [1, 1], [1, 2], [-1, 1], [3, 1], [2, 2]].map(([cx, cy], i) => {
+    const on = Math.floor(dt * 15 + i) % 3 !== 0;
+    return <div key={i} style={{ position: 'absolute', left: x + cx * 18 * (flip ? -1 : 1), top: y + cy * 18, width: 18, height: 18, background: i % 3 === 0 ? TH.accent : TH.soft, opacity: (1 - dt / 0.45) * (on ? 1 : 0.35) * R(i + at * 10, 0.6, 1) }} />;
+  })}</>;
+};
+
+const Halftone = ({ at, x, y, size = 1000 }) => {
+  const t = useT();
+  const p = prog(t, at, at + 0.6, Easing.out(Easing.cubic));
+  if (t < at || p >= 1) return null;
+  const mask = 'radial-gradient(circle, transparent 38%, #000 52%, transparent 74%)';
+  return <div style={{ position: 'absolute', left: x - size / 2, top: y - size / 2, width: size, height: size, transform: `scale(${0.6 + p * 0.9})`, opacity: 1 - p * p, WebkitMaskImage: mask, maskImage: mask, backgroundImage: `radial-gradient(circle, #ff5a6a 3px, transparent 3.6px), radial-gradient(circle, ${TH.soft} 2px, transparent 2.6px)`, backgroundSize: '20px 20px, 12px 12px', backgroundPosition: '0 0, 6px 6px' }} />;
+};
+
+// Cinta: siempre una curva suave de A a B (nunca al azar), dibujada DETRÁS del presentador
+const Ribbon = ({ at, d, width = 16 }) => {
+  const t = useT();
+  const dt = t - at;
+  if (dt < 0 || dt > 0.9) return null;
+  const draw = prog(t, at, at + 0.35, Easing.out(Easing.cubic)), fade = prog(t, at + 0.45, at + 0.9);
+  return (
+    <svg width="1080" height="1920" style={{ position: 'absolute', inset: 0, opacity: 1 - fade }}>
+      <path d={d} pathLength="1" fill="none" stroke={TH.accent} strokeWidth={width * (1 - fade)} strokeLinecap="round" strokeDasharray="1" strokeDashoffset={1 - draw} style={{ filter: `drop-shadow(0 0 14px ${TH.accent})` }} />
+      <path d={d} pathLength="1" fill="none" stroke="#fff" strokeWidth={4} strokeLinecap="round" strokeDasharray="1" strokeDashoffset={1 - draw + 0.08} />
+    </svg>
+  );
+};
+const trail = ([fx, fy], [tx, ty]) => {
+  const mx = (fx + tx) / 2, my = (fy + ty) / 2, dx = tx - fx, dy = ty - fy, len = Math.hypot(dx, dy) || 1;
+  const k = 0.22 * len, side = tx > 540 ? -1 : 1; // la curva se abre hacia fuera
+  return `M${fx} ${fy} Q${mx - (dy / len) * k * side} ${my + (dx / len) * k * side} ${tx} ${ty}`;
+};
+
+// --- Tarjetas ------------------------------------------------------------------
+const Icon = ({ name }) => {
+  if (name === 'play') return <svg width="46" height="46" viewBox="0 0 10 10"><path d="M2.5 1.5l6 3.5-6 3.5z" fill="#fff" /></svg>;
+  if (name === 'headphones') return <svg width="46" height="46" viewBox="0 0 24 24"><path d="M3 14a9 9 0 0118 0v4a2 2 0 01-2 2h-2v-7h4M3 14v4a2 2 0 002 2h2v-7H3" fill="none" stroke="#fff" strokeWidth="2" /></svg>;
+  return <span style={{ fontSize: 46 }}>{name}</span>;
+};
+
+const CardBody = ({ c = {}, W, H }) => {
+  if (c.image) return <Img src={staticFile(c.image)} style={{ width: '100%', height: '100%', objectFit: c.fit || 'cover', objectPosition: 'top' }} />;
+  if (c.emoji) return <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: c.bg || 'linear-gradient(160deg,#fff,#f6d6d6)', fontSize: Math.min(W, H) * 0.55 }}>{c.emoji}</div>;
+  if (c.text) return <div style={{ width: '100%', height: '100%', padding: 22, background: c.bg || 'linear-gradient(160deg,#fff,#f1e2e2)', fontFamily: F, fontWeight: 800, fontStyle: 'italic', fontSize: Math.min(60, W / 4.6), lineHeight: 0.95, color: TH.accent, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center' }}>{c.text}</div>;
+  const [a, b] = c.colors || [TH.accent, TH.dark];
+  return <div style={{ width: '100%', height: '100%', background: `linear-gradient(160deg, ${a}, ${b})`, display: 'grid', placeItems: 'center' }}><Icon name="play" /></div>;
+};
+
+const Card = ({ at, until, x, y, w = 320, h = 460, rot = 0, from = [0, 300], label, icon, content }) => {
+  const t = useT();
+  if (t < at) return null;
+  const sp = spring({ frame: Math.round((t - at) * FPS), fps: FPS, config: { damping: 14 } });
+  const out = until === undefined ? 0 : prog(t, until, until + 0.25);
+  if (out >= 1) return null;
+  return (
+    <div style={{ position: 'absolute', left: x, top: y, width: w, height: h, transform: `translate(${(1 - sp) * from[0]}px, ${(1 - sp) * from[1]}px) rotate(${rot + (1 - sp) * 14}deg) scale(${sp})`, opacity: 1 - out, filter: `blur(${out * 20}px)` }}>
+      <div style={{ width: '100%', height: '100%', borderRadius: 34, border: `9px solid ${TH.accent}`, overflow: 'hidden', background: '#dfe9f1', boxShadow: '0 24px 44px #00000033', position: 'relative' }}>
+        <CardBody c={content} W={w} H={h} />
+        <div style={{ position: 'absolute', inset: 0, background: 'linear-gradient(160deg, #ffffff40, transparent 35%)' }} />
+      </div>
+      {label && <div style={{ position: 'absolute', left: 14, top: -30, background: TH.accent, color: '#fff', fontFamily: F, fontWeight: 600, fontStyle: 'italic', fontSize: 34, padding: '0 20px 4px', borderRadius: 10, transform: 'rotate(-6deg)' }}>{label}</div>}
+      {icon && <div style={{ position: 'absolute', right: -26, top: 40, width: 96, height: 96, borderRadius: 26, background: TH.dark, border: '4px solid #ff6a7a', transform: 'rotate(10deg)', display: 'grid', placeItems: 'center', boxShadow: `0 0 24px ${TH.accent}88` }}><Icon name={icon} /></div>}
+    </div>
+  );
+};
+
+// --- Posiciones (slots) relativas a la cabeza del presentador --------------------
+const slots = (ht) => ({
+  gloss: { top: { y: 130, max: 420 }, second: { y: 430, max: 260 }, aboveHead: { y: ht - 380, max: 330 }, bottom: { y: 1180, max: 210 }, footer: { y: 1620, max: 150 } },
+  small: { tl: { x: 90, y: 62 }, tr: { r: 90, y: 62 }, lead: { x: 100, y: ht - 430 }, sub: { x: 110, y: 580 }, bottom: { x: 0, y: 1560, center: true } },
+  pill: { left: { x: 70, y: 540 }, right: { r: 70, y: 540 }, url: { x: 60, y: 1650 } },
+  card: {
+    aboveHead: { x: 375, y: ht - 330, w: 330, h: 470, rot: 0, from: [0, 360] },
+    left1: { x: 90, y: 880, w: 190, h: 330, rot: -6, from: [330, 140] },
+    left2: { x: 70, y: 1030, w: 210, h: 360, rot: 4, from: [340, 60] },
+    left3: { x: 190, y: 1230, w: 300, h: 400, rot: -3, from: [330, -80] },
+    right1: { x: 560, y: ht - 180, w: 270, h: 340, rot: 6, from: [-150, 420] },
+    right2: { x: 620, y: 640, w: 310, h: 520, rot: 5, from: [-250, 470] },
+  },
+});
+
+const place = (s) => (s.center ? { left: 0, right: 0, display: 'flex', justifyContent: 'center', top: s.y } : s.r !== undefined ? { right: s.r, top: s.y } : { left: s.x ?? 60, top: s.y });
+
+// Elemento de escena presentador. layer: 'back' (tarjetas, cintas, halo) | 'front' (texto)
+const Element = ({ el, sc, ht, layer, hasCutout }) => {
+  const S = slots(ht);
+  const until = el.until ?? (el.kind === 'gloss' ? sc.to - 0.05 : sc.to);
+  if (el.kind === 'card') {
+    if (layer !== 'back') return null;
+    const g = { ...(S.card[el.slot] || S.card.aboveHead), ...el };
+    const target = [g.x + g.w / 2, g.y + g.h / 2];
+    return (
+      <>
+        {hasCutout && <Ribbon at={el.at - 0.1} d={trail([540, ht + 420], target)} />}
+        <Card at={el.at} until={until} {...g} label={el.label} icon={el.icon} content={el.content} />
+      </>
+    );
+  }
+  if (layer !== 'front') return null;
+  if (el.kind === 'gloss') {
+    const g = S.gloss[el.slot] || S.gloss.top;
+    const size = el.size ?? fit(el.text, el.maxWidth ?? 930, g.max);
+    const y = el.y ?? g.y;
+    const style = el.align === 'center' ? { left: 0, right: 0, display: 'flex', justifyContent: 'center', top: y } : { left: el.x ?? 60, top: y };
+    return <div style={{ position: 'absolute', ...style }}><Gloss text={el.text} at={el.at} until={until} size={size} white={el.white} /></div>;
+  }
+  if (el.kind === 'small') {
+    const g = { ...(S.small[el.slot] || S.small.tl), ...(el.x !== undefined ? { x: el.x, r: undefined } : {}), ...(el.y !== undefined ? { y: el.y } : {}) };
+    return <div style={{ position: 'absolute', ...place(g) }}><Small at={el.at} until={until} size={el.size ?? 44} white={el.white}>{el.text}</Small></div>;
+  }
+  if (el.kind === 'pill') {
+    const g = S.pill[el.slot] || S.pill.left;
+    return <div style={{ position: 'absolute', ...place(g) }}><Pill at={el.at} until={until} size={el.size ?? 44}>{el.text}</Pill></div>;
+  }
+  return null;
+};
+
+// Escena presentador: capa de fondo + capa de texto
+const PresenterScene = ({ sc, plan, layer }) => {
+  const t = useT();
+  if (t < sc.from || t >= sc.to + 0.3) return null;
+  const ht = 1920 - (1920 - (plan.headTop ?? 780)) * (sc.zoom ?? 1); // la cabeza baja cuando se aleja el video
+  const els = sc.elements || [];
+  return (
+    <>
+      {layer === 'back' && sc.halo !== false && <Halftone at={sc.from} x={540} y={ht + 220} size={1100} />}
+      {layer === 'back' && sc.from > 0.5 && plan.cutout && <Ribbon at={sc.from - 0.55} d={`M-60 ${(plan.floorY ?? 1580) + 30} C 300 ${(plan.floorY ?? 1580) - 70} 700 ${(plan.floorY ?? 1580) + 110} 1140 ${(plan.floorY ?? 1580) - 10}`} />}
+      {layer === 'front' && els.length > 0 && <Pixels at={els[0].at - 0.12} x={sc.pixelX ?? 140} y={sc.pixelY ?? 220} />}
+      {els.map((el, i) => <Element key={i} el={el} sc={sc} ht={ht} layer={layer} hasCutout={!!plan.cutout} />)}
+    </>
+  );
+};
+
+// --- Escena inserto: fondo + objeto que representa lo que se dice --------------------
+const BGS = {
+  sky: ['#5aa9c4', '#a7d4e4', '#d6eef5'], sunset: ['#ff7a59', '#ffb26b', '#ffe0b8'], night: ['#10122b', '#2a2f6b', '#4a5aa8'],
+  mint: ['#58c9a8', '#a6e8d0', '#e0faf0'], gold: ['#3a2a10', '#8a6a22', '#e8c36a'], paper: ['#d9d6dc', '#ececf0', '#f7f6f8'], rose: ['#ff8fa3', '#ffc2cf', '#fff0f3'],
+};
+const stickerOutline = '0 0 0 #fff, 4px 0 0 #fff, -4px 0 0 #fff, 0 4px 0 #fff, 0 -4px 0 #fff, 3px 3px 0 #fff, -3px -3px 0 #fff, 3px -3px 0 #fff, -3px 3px 0 #fff';
+
+const InsertScene = ({ sc }) => {
+  const t = useT();
+  if (t < sc.from + 0.12 || t >= sc.to + 0.1) return null;
+  const s = sc.from + 0.12;
+  const p = prog(t, s, s + 0.4), phoneIn = prog(t, s + 0.1, s + 0.55), out = prog(t, sc.to - 0.2, sc.to + 0.1);
+  const [c1, c2, c3] = BGS[sc.bg] || BGS.sky;
+  const obj = sc.object || {};
+  const bob = Math.sin(t * 2.2) * 10;
+  const lines = sc.lines || [];
+  return (
+    <AbsoluteFill style={{ background: `linear-gradient(180deg, ${c1} 0%, ${c2} 55%, ${c3} 100%)`, filter: `blur(${out * 50}px)`, opacity: 1 - out * 0.4 }}>
+      {Array.from({ length: 16 }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, -100, 1000) + Math.sin(t * 0.6 + i) * 16, top: R(i + 30, 150, 1700), width: R(i + 60, 260, 520), height: R(i + 60, 200, 380), borderRadius: '50%', background: '#fff', opacity: R(i + 90, 0.18, 0.5), filter: 'blur(30px)' }} />)}
+      <div style={{ position: 'absolute', left: 140, top: 260, width: 800, height: 1100, borderRadius: 120, border: `9px solid ${TH.soft}`, background: 'linear-gradient(160deg, #ffffff50, #ffffff12)', transform: `translateY(${(1 - phoneIn) * -300}px)`, opacity: phoneIn, boxShadow: `0 0 40px ${TH.soft}55` }}>
+        <div style={{ position: 'absolute', left: 330, top: 28, width: 140, height: 34, borderRadius: 18, background: TH.accent }} />
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: 1000, display: 'flex', justifyContent: 'center', transform: `translateY(${(1 - p) * 500 + bob}px) scale(${0.9 + p * 0.1})`, filter: 'drop-shadow(0 30px 30px #0003)' }}>
+        {obj.image ? <Img src={staticFile(obj.image)} style={{ height: 760, objectFit: 'contain' }} /> : <div style={{ fontSize: 560, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
+      </div>
+      {(sc.stickers || []).map((e, i) => <div key={i} style={{ position: 'absolute', left: [40, 800, 80, 810][i % 4], top: [1060, 1100, 1500, 1480][i % 4], fontSize: 150, textShadow: stickerOutline, transform: `translate(${Math.sin(t * 2 + i) * 10}px, ${Math.cos(t * 2.4 + i) * 12}px) rotate(${-8 + i * 9 + Math.sin(t * 3) * 4}deg)`, opacity: phoneIn }}>{e}</div>)}
+      <Halftone at={s} x={540} y={900} size={1500} />
+      <Pixels at={s} x={90} y={210} /><Pixels at={s + 0.9} x={820} y={190} flip />
+      <div style={{ position: 'absolute', top: 400, width: 800, left: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
+        {lines.map((l, i) => l.gloss
+          ? <Gloss key={i} text={l.gloss} at={l.at} until={sc.to - 0.2} size={fit(l.gloss, 700, l.size ?? 160)} />
+          : <Small key={i} at={l.at} until={sc.to - 0.2} size={l.size ?? 60}>{l.small}</Small>)}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// --- Cámara: zoom del presentador, desenfoque en cada corte, destello en insertos ------
+const BlurMask = ({ cuts, children }) => {
+  const t = useT();
+  let k = 0;
+  for (const c of cuts) k = Math.max(k, 1 - Math.min(1, Math.abs(t - c) / 0.14));
+  return <AbsoluteFill style={{ filter: k ? `blur(${k * 26}px)` : undefined, transform: `scale(${1 + k * 0.05})` }}>{children}</AbsoluteFill>;
+};
+
+const Flash = ({ cuts }) => {
+  const t = useT();
+  let k = 0;
+  for (const c of cuts) k = Math.max(k, 1 - Math.min(1, Math.abs(t - c) / 0.18));
+  return <AbsoluteFill style={{ background: '#fff', opacity: k * 0.95, pointerEvents: 'none' }} />;
+};
+
+const zoomAt = (plan, t) => {
+  const list = (plan.scenes || []).filter((x) => x.type !== 'insert');
+  let cur = 1, prev = 1;
+  for (const sc of list) if (sc.from <= t) { prev = cur; cur = sc.zoom ?? 1; }
+  const sc = list.filter((x) => x.from <= t).pop();
+  return sc ? interpolate(prog(t, sc.from, sc.from + 0.45, Easing.inOut(Easing.cubic)), [0, 1], [prev, cur]) : 1;
+};
+
+// Zoom de énfasis (punch-in): sube suave a `scale`, se mantiene y vuelve
+const punchAt = (plan, t) => {
+  let k = 1;
+  for (const p of plan.punches || []) {
+    const x = (t - p.at) / p.dur;
+    if (x > 0 && x < 1) { const e = Math.min(1, x * 5, (1 - x) * 5); k *= 1 + ((p.scale ?? 1.1) - 1) * e * e * (3 - 2 * e); }
+  }
+  return k;
+};
+
+const PersonVideo = ({ plan, src, transparent }) => {
+  const t = useT();
+  const z = zoomAt(plan, t);
+  const feather = z < 0.999 && !transparent ? { WebkitMaskImage: 'linear-gradient(to right, transparent, #000 90px, #000 calc(100% - 90px), transparent), linear-gradient(to bottom, transparent, #000 90px)', WebkitMaskComposite: 'source-in', maskComposite: 'intersect' } : {};
+  return (
+    <AbsoluteFill style={{ transformOrigin: '50% 100%', transform: `scale(${z})`, ...feather }}>
+      <AbsoluteFill style={{ transformOrigin: '50% 38%', transform: `scale(${punchAt(plan, t)})` }}>
+        <OffthreadVideo src={staticFile(src)} transparent={transparent} muted={transparent} style={{ width: 1080, height: 1920, objectFit: 'cover' }} />
+      </AbsoluteFill>
+    </AbsoluteFill>
+  );
+};
+
+// --- Modo normal: subtítulos palabra a palabra, rótulo y llamada a la acción ----------
+const Captions = ({ cfg }) => {
+  const t = useT();
+  const ws = cfg.words || [];
+  if (!ws.length) return null;
+  const per = cfg.perLine ?? 3;
+  const chunks = [];
+  let cur = [];
+  ws.forEach((w, i) => {
+    cur.push({ ...w, i });
+    const next = ws[i + 1];
+    if (cur.length >= per || !next || (/[.!?¿¡,;:]$/.test(w.w) && cur.length >= 2) || next.s - w.e > 0.5) { chunks.push(cur); cur = []; }
+  });
+  const ch = chunks.find((c) => t >= c[0].s - 0.04 && t < c[c.length - 1].e + 0.28);
+  if (!ch) return null;
+  const k = prog(t, ch[0].s - 0.04, ch[0].s + 0.12);
+  const emph = new Set((cfg.emphasis || []).map((x) => String(x).toLowerCase()));
+  return (
+    <div style={{ position: 'absolute', left: 60, right: 60, top: cfg.y ?? 1330, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 18px', transform: `scale(${0.9 + k * 0.1}) translateY(${(1 - k) * 24}px)`, opacity: k }}>
+      {ch.map((w) => {
+        const on = t >= w.s && t < w.e + 0.04;
+        const em = emph.has(w.w.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase());
+        return <span key={w.i} style={{ display: 'inline-block', fontFamily: F, fontWeight: 800, fontSize: cfg.size ?? 84, letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: 1.05, color: on ? (cfg.activeText ?? '#111') : em ? TH.accent : '#fff', background: on ? TH.accent : 'transparent', borderRadius: 16, padding: '0 14px', textShadow: on ? 'none' : '0 4px 0 #00000088, 0 0 18px #00000066', transform: `scale(${on ? 1.1 : 1})` }}>{w.w.replace(/[.,;:]+$/, '')}</span>;
+      })}
+    </div>
+  );
+};
+
+const Lower = ({ cfg }) => {
+  const t = useT();
+  const at = cfg.at ?? 0.4, to = at + (cfg.dur ?? 3.2);
+  if (t < at || t > to + 0.4) return null;
+  const k = prog(t, at, at + 0.35), o = prog(t, to, to + 0.3);
+  return (
+    <div style={{ position: 'absolute', left: 60, top: cfg.y ?? 1100, transform: `translateX(${(1 - k) * -520 - o * 520}px)` }}>
+      <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: 64, padding: '6px 28px 10px', borderRadius: 14, letterSpacing: '-0.03em', width: 'fit-content' }}>{cfg.name}</div>
+      {cfg.role && <div style={{ background: '#111', color: '#fff', fontFamily: F, fontWeight: 500, fontSize: 34, padding: '6px 22px', borderRadius: '0 0 14px 14px', width: 'fit-content' }}>{cfg.role}</div>}
+    </div>
+  );
+};
+
+const Cta = ({ cfg }) => {
+  const t = useT();
+  if (t < cfg.at) return null;
+  const sp = spring({ frame: Math.round((t - cfg.at) * FPS), fps: FPS, config: { damping: 12 } });
+  return (
+    <div style={{ position: 'absolute', left: 0, right: 0, top: cfg.y ?? 1640, display: 'flex', justifyContent: 'center' }}>
+      <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: 54, padding: '10px 38px 14px', borderRadius: 99, transform: `scale(${sp * (1 + 0.03 * Math.sin(t * 8))})`, boxShadow: `0 14px 40px ${TH.accent}66` }}>{cfg.text}</div>
+    </div>
+  );
+};
+
+const sfx = (src, at, vol, dur, key) => <Sequence key={key} from={Math.max(0, Math.round(at * FPS))} durationInFrames={dur}><Audio src={staticFile(src)} volume={vol} /></Sequence>;
+
+export const Cg = ({ plan }) => {
+  TH = { ...DEFAULT_TH, ...(plan.theme || {}) };
+  const t = useT();
+  const scenes = plan.scenes || [];
+  const cuts = scenes.slice(1).map((s) => s.from);
+  const inserts = scenes.filter((s) => s.type === 'insert');
+  const flashes = inserts.flatMap((s) => [s.from + 0.12, s.to + 0.1]);
+  const gray = plan.introFade === false ? 0 : 1 - prog(t, 0, 0.35, Easing.linear);
+  const layerScenes = (layer) => scenes.filter((s) => s.type !== 'insert').map((s, i) => <PresenterScene key={i} sc={s} plan={plan} layer={layer} />);
+  return (
+    <AbsoluteFill style={{ background: Array.isArray(plan.bg) ? `linear-gradient(180deg, ${plan.bg[0]}, ${plan.bg[1]})` : TH.bg }}>
+      <BlurMask cuts={cuts}>
+        {plan.video ? <PersonVideo plan={plan} src={plan.video} /> : null}
+        {layerScenes('back')}
+        {plan.cutout ? <PersonVideo plan={plan} src={plan.cutout} transparent /> : null}
+        {layerScenes('front')}
+        {inserts.map((s, i) => <InsertScene key={i} sc={s} />)}
+        <AbsoluteFill style={{ background: '#8c8c94', opacity: gray * 0.85 }} />
+      </BlurMask>
+      {plan.captions && <Captions cfg={plan.captions} />}
+      {plan.lower && <Lower cfg={plan.lower} />}
+      {plan.cta && <Cta cfg={plan.cta} />}
+      <Flash cuts={flashes} />
+      {plan.music && <Audio src={staticFile(plan.music)} volume={plan.musicVolume ?? 0.08} />}
+      {cuts.map((c, i) => sfx('whoosh.wav', c - 0.12, 0.45, 16, 'w' + i))}
+      {scenes.flatMap((sc, i) => (sc.elements || []).filter((e) => e.kind === 'gloss').map((e, j) => sfx('pop.wav', e.at - 0.1, 0.3, 5, `g${i}_${j}`)))}
+      {scenes.map((sc, i) => (sc.elements?.length ? sfx('click.wav', sc.elements[0].at - 0.15, 0.4, 3, 'k' + i) : null))}
+    </AbsoluteFill>
+  );
+};

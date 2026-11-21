@@ -14,7 +14,7 @@ import argparse, asyncio, json, os, re, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-from lexicon import EMOJI, STOP, emoji_for, norm  # noqa: E402
+from lexicon import EMOJI, STOP, ACTORS, WORLD_WORDS, actor_for, move_for, emoji_for, norm  # noqa: E402
 
 def run(cmd):
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -328,6 +328,92 @@ def auto_gestures(words, scenes):
             out.append({'at': round(at, 2), 'dur': d, 'kind': kind, **({'n': n} if kind == 'count' else {})}); end = at + d
     return out
 
+def story_scenes(tr, dur, title=None, layout='mixed', end=True):
+    """Cuento infantil: sin presentador. Una escena por frase (página de cuento con lectura resaltada o ilustración a pantalla completa),
+    portada, moraleja y FIN. Mundo, personajes y movimiento salen de las palabras del guion."""
+    words = tr['words']
+    sents = [s_ for s_ in tr.get('sentences') or sentences_from(words)]
+    # unir frases muy cortas
+    merged = []
+    for sn in sents:
+        if merged and (sn['e'] - sn['s'] < 2.2 or merged[-1]['e'] - merged[-1]['s'] < 1.6) and sn['e'] - merged[-1]['s'] < 8:
+            merged[-1] = {'text': merged[-1]['text'] + ' ' + sn['text'], 's': merged[-1]['s'], 'e': sn['e']}
+        else:
+            merged.append(dict(sn))
+    scenes, world, page, k = [], 'forest', 0, 0
+    t_start = 0.0
+    if title:
+        title_to = max(3.2, round(merged[0]['e'] + 0.1, 2)) if merged else 3.2  # la portada cubre la frase inicial («Había una vez…»)
+        if merged and merged[0]['e'] <= title_to: merged = merged[1:]
+        scenes.append({'type': 'insert', 'layout': 'title', 'from': 0.0, 'to': title_to, 'title': {'kicker': 'Había una vez…', 'text': title, 'emoji': next((actor_for(w['w']) for w in words if actor_for(w['w'])), '📖'), 'world': 'castle'}, 'lines': []})
+        t_start = title_to
+    first_narr = True
+    for sn in merged:
+        sw = [w for w in words if w['s'] >= sn['s'] - 0.01 and w['e'] <= sn['e'] + 0.05]
+        if not sw: continue
+        text = sn['text']
+        frm = max(t_start, sn['s'] - 0.15) if first_narr else round(sn['s'] - 0.15, 2)
+        first_narr = False
+        low = ' '.join(norm(w['w']) for w in sw)
+        # moraleja
+        m = re.match(r'\s*(moraleja|moral)\b[:,.\s-]*(.*)', text, re.I)
+        if m:
+            scenes.append({'type': 'insert', 'layout': 'moral', 'from': round(frm, 2), 'moral': {'title': 'MORALEJA', 'text': m.group(2).strip() or text, 'emoji': '🦉'}, 'lines': [], 'words': sw}); continue
+        # mundo
+        for w in sw:
+            wk = WORLD_WORDS.get(norm(w['w']))
+            if wk: world = wk
+        # personajes (en orden de aparición, sin repetir)
+        seen, actors = [], []
+        for w in sw:
+            e = actor_for(w['w'])
+            if e and e not in seen: seen.append(e); actors.append((e, w['s']))
+        actors = actors[:3]
+        mv = move_for([w['w'] for w in sw])
+        # magia
+        if any(norm(w['w']) in ('magia', 'hechizo', 'varita', 'abracadabra', 'magico', 'magica') for w in sw):
+            kw = next((w for w in sw if norm(w['w']) in ('magia', 'hechizo', 'varita', 'abracadabra', 'magico', 'magica')), sw[0])
+            scenes.append({'type': 'insert', 'layout': 'magic', 'from': round(frm, 2), 'magic': {'emoji': actors[0][0] if actors else '✨', 'text': '¡MAGIA!'}, 'lines': [], 'words': sw}); continue
+        n_xs = {1: [0.5], 2: [0.28, 0.72], 3: [0.2, 0.5, 0.8]}.get(len(actors), [])
+        acts = []
+        for j, ((e, at), x) in enumerate(zip(actors, n_xs)):
+            move = (mv if j == 0 and mv else ('bounce' if j % 2 else 'sway'))
+            if move == 'walk' and len(actors) == 1: a = {'emoji': e, 'x': 0.12, 'to': 0.62, 'y': 0.74, 'size': 360, 'move': 'walk', 'dur': max(2, sn['e'] - sn['s'] - 0.5)}
+            elif move == 'fly': a = {'emoji': e, 'x': 0.1, 'to': 0.8, 'y': 0.5, 'size': 320, 'move': 'fly', 'dur': max(2, sn['e'] - sn['s'] - 0.5)}
+            elif move == 'swim': a = {'emoji': e, 'x': x, 'y': 0.72, 'size': 300, 'move': 'swim'}
+            else: a = {'emoji': e, 'x': x, 'y': 0.74, 'size': 340 if len(actors) == 1 else 300, 'move': move}
+            a['at'] = round(max(frm + 0.1, at - 0.2), 2)
+            acts.append(a)
+        # diálogo entre comillas -> globo
+        mq = re.search(r'[«“"]([^»”"]{2,60})[»”"]', text)
+        if mq and acts:
+            qw = next((w for w in sw if mq.group(1).split()[0].strip('.,¡!¿?') in w['w']), sw[0])
+            acts[0]['say'] = mq.group(1).strip(); acts[0]['sayAt'] = round(qw['s'] - 0.1, 2); acts[0]['sayDur'] = max(1.8, min(3.4, (sn['e'] - qw['s'])))
+        use_book = layout == 'storybook' or (layout == 'mixed' and k % 3 != 2)
+        if use_book:
+            page += 1
+            sc = {'type': 'insert', 'layout': 'storybook', 'story': {'world': world, 'actors': acts, 'text': text, 'page': page}, 'words': sw, 'lines': []}
+        else:
+            sc = {'type': 'insert', 'layout': 'scene', 'scene': {'world': world, 'pan': 30 if mv == 'walk' else 0, 'actors': acts, 'caption': text if len(text) < 70 else ''}, 'words': sw, 'lines': []}
+        sc['from'] = round(frm, 2); scenes.append(sc); k += 1
+    last_end = words[-1]['e'] if words else dur
+    if end:
+        scenes.append({'type': 'insert', 'layout': 'theend', 'from': round(last_end + 0.3, 2), 'theend': {'text': 'FIN', 'world': 'night'}, 'lines': []})
+    total = max(dur, last_end + (3.4 if end else 0.6))
+    for i, sc in enumerate(scenes):
+        sc['to'] = round(scenes[i + 1]['from'] if i + 1 < len(scenes) else total, 2)
+        if sc['to'] <= sc['from'] + 0.5: sc['to'] = round(sc['from'] + 0.8, 2)
+    for i in range(1, len(scenes)):
+        if scenes[i]['from'] < scenes[i - 1]['to']: scenes[i - 1]['to'] = scenes[i]['from']
+    return scenes, total
+
+def speech_spans(words):
+    out = []
+    for w in words:
+        if out and w['s'] - out[-1][1] < 0.6: out[-1][1] = w['e']
+        else: out.append([w['s'], w['e']])
+    return out
+
 def cmd_plan(a):
     work = os.path.abspath(a.work)
     tr = json.load(open(os.path.join(work, 'transcript.json'), encoding='utf-8'))
@@ -341,6 +427,14 @@ def cmd_plan(a):
         theme = {k: b[k] for k in ('accent', 'dark', 'mid', 'light', 'soft', 'ink', 'outline') if k in b}
         if b.get('set'): a.set = b['set']
         if b.get('character'): cfg = {**b['character'], **cfg}
+    if a.story:
+        scenes, dur = story_scenes(tr, dur, a.title, a.layout, not a.no_end)
+        plan = {'mode': 'cuento', 'duration': round(dur, 2), 'fps': a.fps, 'voice': 'voice.mp3', 'music': 'music.wav' if os.path.exists(os.path.join(work, 'music.wav')) else None, 'musicVolume': 0.09,
+                'theme': theme, 'speech': speech_spans(tr['words']), 'character': None, 'scenes': scenes}
+        if a.captions: plan['captions'] = {'words': tr['words'], 'perLine': 3, 'y': 1500, 'size': 70, 'activeText': '#ffffff'}
+        json.dump(plan, open(os.path.join(work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        print(f"[crimson] plan.json (cuento): {len(scenes)} escenas ({', '.join(sorted({x['layout'] for x in scenes}))}), {round(dur, 1)}s")
+        return
     scenes = auto_scenes(tr, dur, a.url, not a.no_broll)
     plan = {
         'mode': 'personaje', 'duration': dur, 'fps': a.fps, 'voice': 'voice.mp3',
@@ -368,6 +462,10 @@ def main():
     q.add_argument('--fps', type=int, default=30, choices=[30, 60])
     q.add_argument('--url', help='enlace que se mostrará en las escenas de navegador')
     q.add_argument('--no-broll', action='store_true', help='sin escenas inserto (solo presentador)')
+    q.add_argument('--story', action='store_true', help='cuento infantil: sin presentador, páginas ilustradas con lectura resaltada')
+    q.add_argument('--title', help='título del cuento (crea portada)')
+    q.add_argument('--layout', default='mixed', choices=['mixed', 'storybook', 'scene'], help='cuento: página con texto, ilustración a pantalla completa o mezcla')
+    q.add_argument('--no-end', action='store_true', help='cuento: sin escena FIN')
     a = ap.parse_args()
     {'init': cmd_init, 'plan': cmd_plan}[a.cmd](a)
 

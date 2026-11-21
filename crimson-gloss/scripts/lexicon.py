@@ -42,3 +42,35 @@ def emoji_for(word):
         for key, e in EMOJI.items():
             if len(key) >= 5 and (k.startswith(key[:5]) and key[:5] == k[:5]): return e
     return None
+
+
+# --- Cuentos: personajes, mundos y verbos de movimiento ---------------------------------------------
+ACTORS = {
+    'oso': '🐻', 'osito': '🐻', 'conejo': '🐰', 'conejito': '🐰', 'zorro': '🦊', 'gato': '🐱', 'gatito': '🐱', 'perro': '🐶', 'perrito': '🐶', 'leon': '🦁', 'tigre': '🐯', 'elefante': '🐘', 'mono': '🐒',
+    'tortuga': '🐢', 'buho': '🦉', 'lechuza': '🦉', 'rana': '🐸', 'ranita': '🐸', 'mago': '🧙', 'bruja': '🧙‍♀️', 'hada': '🧚', 'sirena': '🧜‍♀️', 'unicornio': '🦄', 'dragon': '🐉', 'princesa': '👸', 'principe': '🤴',
+    'rey': '🤴', 'reina': '👸', 'nina': '👧', 'nino': '👦', 'abuela': '👵', 'abuelo': '👴', 'robot': '🤖', 'pez': '🐠', 'pulpo': '🐙', 'pajaro': '🐦', 'pajarito': '🐦', 'lobo': '🐺', 'cerdito': '🐷', 'cerdo': '🐷',
+    'oveja': '🐑', 'cordero': '🐑', 'vaca': '🐮', 'caballo': '🐴', 'pato': '🦆', 'patito': '🦆', 'abeja': '🐝', 'mariposa': '🦋', 'ballena': '🐳', 'tiburon': '🦈', 'delfin': '🐬', 'raton': '🐭', 'ardilla': '🐿️',
+    'jirafa': '🦒', 'cebra': '🦓', 'hipopotamo': '🦛', 'cocodrilo': '🐊', 'serpiente': '🐍', 'gallina': '🐔', 'gallo': '🐓', 'pollito': '🐥', 'pinguino': '🐧', 'koala': '🐨', 'panda': '🐼', 'cangrejo': '🦀',
+    'caracol': '🐌', 'hormiga': '🐜', 'dinosaurio': '🦖', 'fantasma': '👻', 'alien': '👽', 'astronauta': '👩‍🚀', 'loro': '🦜', 'bebe': '👶', 'payaso': '🤡', 'angel': '👼', 'cisne': '🦢', 'aguila': '🦅',
+    'rabbit': '🐰', 'bear': '🐻', 'fox': '🦊', 'cat': '🐱', 'dog': '🐶', 'lion': '🦁', 'dragon_en': '🐉', 'princess': '👸', 'prince': '🤴', 'fairy': '🧚', 'wizard': '🧙',
+}
+WORLD_WORDS = {
+    'bosque': 'forest', 'selva': 'jungle', 'jungla': 'jungle', 'mar': 'ocean', 'oceano': 'ocean', 'playa': 'beach', 'castillo': 'castle', 'reino': 'castle', 'palacio': 'castle', 'espacio': 'space', 'planeta': 'space',
+    'cohete': 'space', 'galaxia': 'space', 'granja': 'farm', 'campo': 'farm', 'desierto': 'desert', 'ciudad': 'city', 'nieve': 'snow', 'invierno': 'snow', 'noche': 'night', 'dulces': 'candy', 'caramelo': 'candy', 'pastel': 'candy',
+    'forest': 'forest', 'sea': 'ocean', 'castle': 'castle', 'space': 'space', 'farm': 'farm', 'snow': 'snow', 'night': 'night',
+}
+MOVE_STEMS = [('walk', ('camin', 'corr', 'pase', 'marcha', 'avanz', 'sigui', 'fue', 'llego')), ('fly', ('vuel', 'volo', 'volab', 'volar', 'flew', 'fly')), ('swim', ('nadab', 'nado', 'nadar', 'nadan', 'swam')),
+              ('bounce', ('salt', 'brinc', 'rebot', 'jump')), ('sway', ('bail', 'cant', 'dance', 'sing')), ('float', ('dorm', 'flot', 'sleep'))]
+
+def actor_for(word):
+    k = norm(word)
+    for c in (k, k[:-1] if k.endswith('s') else k, k[:-2] if k.endswith('es') and len(k) > 5 else k):
+        if c in ACTORS: return ACTORS[c]
+    return None
+
+def move_for(words):
+    for w in words:
+        k = norm(w)
+        for mv, stems in MOVE_STEMS:
+            if any(k.startswith(st) for st in stems) and len(k) > 3: return mv
+    return None

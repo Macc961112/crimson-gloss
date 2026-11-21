@@ -1,6 +1,6 @@
 ---
 name: crimson-gloss
-description: Edita el video de una persona hablando a cámara (vertical 9:16) de forma automática y explicada. Tres modos — NORMAL (limpio y rápido - corta silencios, subtítulos palabra a palabra, zooms de énfasis, rótulo con nombre, llamada a la acción, música baja y volumen -14 LUFS), PERSONAJE (sin video - un presentador animado por código con sincronía labial, gestos y cámara, a partir de un guion o una voz) y CRIMSON (estilo "Crimson Gloss" - texto rojo cristal 3D al ritmo de la voz, tarjetas y cintas que salen por detrás de la persona, píxeles, halftone y escenas inserto que ilustran lo que se dice). Usar cuando el usuario dé un video suyo o un guion/idea y pida "edítalo", "ponle subtítulos", "quítale los silencios", "hazlo estilo crimson / tipo crimson / crimson gloss", "texto rojo 3D alrededor mío", "edítalo como el reel de nikhilmotion", "hazme un video sobre X con un muñeco / personaje / presentador animado", "video sin cámara", o /crimson-gloss.
+description: Edita el video de una persona hablando a cámara (vertical 9:16) de forma automática y explicada. Cuatro modos — NORMAL (limpio y rápido - corta silencios, subtítulos palabra a palabra, zooms de énfasis, rótulo con nombre, llamada a la acción, música baja y volumen -14 LUFS), PERSONAJE (sin video - un presentador animado por código con sincronía labial, gestos y cámara, a partir de un guion o una voz) CUENTO (cuentos infantiles ilustrados por código: páginas con lectura resaltada, mundos, personajes animados, moraleja y FIN) y CRIMSON (estilo "Crimson Gloss" - texto rojo cristal 3D al ritmo de la voz, tarjetas y cintas que salen por detrás de la persona, píxeles, halftone y escenas inserto que ilustran lo que se dice). Usar cuando el usuario dé un video suyo o un guion/idea y pida "edítalo", "ponle subtítulos", "quítale los silencios", "hazlo estilo crimson / tipo crimson / crimson gloss", "texto rojo 3D alrededor mío", "edítalo como el reel de nikhilmotion", "hazme un video sobre X con un muñeco / personaje / presentador animado", "video sin cámara", "cuento infantil", "cuento para niños", "video educativo para niños (contar, letras, formas)", o /crimson-gloss.
 ---
 
 # Crimson Gloss (modo normal + modo crimson + modo personaje)
@@ -14,6 +14,7 @@ El usuario entrega **un video suyo hablando a cámara** (modos normal y crimson)
 |---|---|
 | "edítalo", "subtítulos", "quita los silencios", "déjalo listo para redes" (sin mencionar estilo) | **normal** |
 | "estilo crimson", "tipo crimson", "texto rojo 3D", "como el reel de nikhilmotion" (con su video) | **crimson** |
+| "cuento", "cuento infantil", "historia para niños", "fábula", contenido educativo para niños | **cuento** |
 | NO hay video: "hazme un video sobre…", "con un muñeco / personaje / avatar", "sin cámara", da un guion o una voz | **personaje** |
 Si no está claro, **normal** y ofrécele crimson al final. Ambos usan el mismo motor y se pueden mezclar (subtítulos dentro de un plan crimson, si lo pide).
 
@@ -119,6 +120,22 @@ python "SKILL_DIR/scripts/render.py" work --out final.mp4 --format both  # 9:16 
 5. **Renderiza**: primero `--still`, luego el final. `render.py` avisa del *lint* (textos que se pisan, escenas largas). `--fps 60` para movimiento más suave (render 2× más lento); `--format both` añade el cuadrado 1:1.
 
 ---
+## MODO CUENTO — cuentos infantiles y educativos, todo por código
+Sin presentador: una **narración** (voz sintética o grabada) sobre **ilustraciones animadas** hechas con mundos, personajes (emojis con movimiento) y globos de diálogo. Sirve para cuentos, fábulas, canciones y lecciones (contar, letras, formas).
+
+```
+python "SKILL_DIR/scripts/character.py" init work --script-file cuento.txt --voice es-MX-DaliaNeural --rate=-4%     # o --audio narracion.mp3
+python "SKILL_DIR/scripts/character.py" plan work --story --title "El conejo valiente" [--layout mixed|storybook|scene] [--no-end] [--captions]
+python "SKILL_DIR/scripts/render.py" work --still 2 6 12 20        # revisar
+python "SKILL_DIR/scripts/render.py" work --out cuento.mp4 --format both
+```
+- **Voz para niños:** `es-MX-DaliaNeural` o `es-ES-ElviraNeural` con `--rate=-4%` (¡con `=`, o argparse lo toma por una opción!). Avisa: `edge-tts` envía el texto a Microsoft; con `--audio` no se envía nada.
+- Si el usuario solo da una idea: **escribe tú el cuento** (≈ 10 frases, una idea por frase, personajes con nombre de animal/oficio, un problema y una solución; en fábulas, termina con «Moraleja: …») y **enséñaselo antes de generar la voz**. Una frase = una lámina (~10 láminas).
+- **`plan --story`** hace solo: portada («Había una vez…» + título) que cubre la primera frase; una escena por frase (alterna **página de cuento** con lectura resaltada y **ilustración a pantalla completa**); **mundo** según el lugar (bosque, selva, mar, playa, castillo, espacio, granja, desierto, ciudad, nieve, noche, dulces); **personajes** según los animales/personas nombrados (oso, conejo, zorro, hada, dragón, sirena, unicornio…, ~80); **movimiento** según el verbo (camina → anda, vuela → vuela, nada → nada, salta → rebota, baila/canta → se mece, duerme → flota); **diálogos entre comillas** → globo de texto; «magia/varita/hechizo» → escena `magic`; «Moraleja: …» → `moral`; y **FIN**.
+- **Revisa y mejora `plan.json`**: ¿el mundo y los personajes encajan?, ¿falta un personaje (el emoji sale del léxico `lexicon.py`; si un animal no está, añade el actor a mano `{ "emoji":"🦔","x":0.3,"y":0.74,"size":320,"move":"sway","at":T }`)?, ¿conviene una escena `counting`, `letter`, `shapes` o `journey` en medio? Los actores usan **el mismo emoji para el mismo personaje** en todo el cuento (consistencia).
+- Educativo: para «cuenta del 1 al 5» pon una escena `counting` (`{"emoji":"🍎","n":5,"label":"manzanas"}`); para el abecedario, una `letter` por letra; para figuras, `shapes`.
+
+---
 ## CATÁLOGO DE B-ROLL (escenas `insert`)
 Un `insert` tapa al presentador 2–4 s con un fondo (`bg`: `sky` `sunset` `night` `mint` `gold` `paper` `rose`) y un **layout** que ilustra la idea. Elige el layout **por lo que se dice**, no por costumbre, y no repitas el mismo dos veces seguidas. Texto de cabecera con `lines` (`{small}` / `{gloss}` + `at`). En modo personaje, `character.py plan` los elige solo; tú puedes cambiarlos en `plan.json`.
 
@@ -145,6 +162,41 @@ Un `insert` tapa al presentador 2–4 s con un fondo (`bg`: `sky` `sunset` `nigh
 Ejemplo: `{ "type":"insert", "layout":"chart", "bg":"mint", "from":7.8, "to":10.7, "chart":{"up":true,"label":"+312%"}, "lines":[{"small":"Resultados","at":7.9},{"gloss":"EN 3 MESES","at":8.2}] }`.
 Plan con **todos** los layouts para copiar: `python "SKILL_DIR/examples/catalog_plan.py" work` (genera `work/plan.json`; para `image` y `clip` pon `work/assets/catalog_image.png` y `catalog_clip.mp4`).
 
+**Cuentos y educativos** (pantalla completa, sin fondo de nube; usa `world` y `actors`):
+
+| `layout` | Qué es | Parámetros |
+|---|---|---|
+| `scene` | Ilustración a pantalla completa con personajes que se mueven | `scene:{world, pan, actors:[…], caption}` |
+| `storybook` | Página de cuento: ilustración enmarcada + texto con lectura resaltada | `story:{world, actors:[…], text, page}` + `words:[{w,s,e}]` (tiempos reales; si falta, reparte el tiempo) |
+| `title` | Portada «Había una vez…» con marco dorado | `title:{kicker, text, emoji, world}` |
+| `theend` | «FIN» con confeti | `theend:{text, sub, world, emojis}` |
+| `moral` | Pergamino con la moraleja | `moral:{title, text, emoji}` |
+| `speech` | Diálogo entre dos personajes con globos | `speech:{world, left:{emoji,name}, right:{emoji,name}, lines:[{who:'left'\|'right', text, at}]}` |
+| `counting` | Contar objetos 1…n con número gigante | `counting:{emoji, n, label, step}` |
+| `letter` | Letra grande + objeto + palabra deletreada | `letter:{letter, word, emoji}` |
+| `shapes` | Formas y colores | `shapes:{items:['circle','square','triangle','star','heart','oval','rect','diamond' o {shape,color,label}]}` |
+| `journey` | Mapa del tesoro con un viajero que recorre puntos | `journey:{traveler, points:[{x,y,emoji,label}]}` (x,y entre 0 y 1) |
+| `magic` | Aparición mágica con destellos | `magic:{emoji, text}` |
+
+**Mundos** (`world`): `forest` `jungle` `ocean` `beach` `castle` `space` `farm` `desert` `city` `snow` `night` `candy`.
+**Actor** (`actors[]`): `{emoji, x, y (0-1), size, move, at, to, dur, flip, say, sayAt, sayDur}`; `move`: `walk` `bounce` `float` `fly` `swim` `sway` `spin` `pulse` `none`. `at` es el segundo **absoluto** en que entra; `say` muestra un globo de texto.
+
+**Generales** (con fondo y cabecera `lines`):
+
+| `layout` | Cuándo usarlo | Parámetros |
+|---|---|---|
+| `split` | mostrar dos cosas a la vez, antes/después | `split:{dir:'v'\|'h', a:{emoji\|image\|text,label}, b:{…}}` |
+| `timeline` | historia, hitos, años | `timeline:[{label, text, emoji, at}]` |
+| `headline` | noticia, «portada», prueba social | `headline:{paper, title, emoji, sub, date, tag}` |
+| `polaroids` | recuerdos, fotos, galería | `polaroids:[{emoji\|image, caption}]` (hasta 5) |
+| `price` | oferta, precio | `price:{label, old, new, note}` |
+| `callout` | resaltar un detalle de una imagen | `callout:{emoji\|image, label, ring:{x,y,r}}` |
+| `progress` | cargando, completado | `progress:{label, value, done}` |
+| `countdown` | cuenta atrás, lanzamiento | `countdown:{from, end}` |
+| `reaction` | «me gusta», celebración en directo | `reaction:{emojis[], center}` |
+
+Plan de ejemplo con todos los nuevos: `python "SKILL_DIR/examples/catalog_cuentos.py" work`. Guía de cuándo usar cada B-roll y cuánto (con fuentes): `reference/broll-guide.md`.
+
 **Regla de uso:** máximo ~1 B-roll cada 3 escenas; los números y las cifras (`stat`, `meter`) son lo más visual: úsalos siempre que el guion dé una cifra. `image` y `clip` solo si el usuario aporta material. No inventes datos: en `chart`, `stat` o `rating` usa solo cifras que el usuario dijo o te dio.
 
 ---
@@ -165,4 +217,4 @@ Plan con **todos** los layouts para copiar: `python "SKILL_DIR/examples/catalog_
 - Los emojis usan la fuente del sistema; para calidad máxima pide imágenes en `work/assets/`.
 
 ## Probado / no probado
-Probado en Windows: clip limpio de presentador (español, 18 s) en modos normal y crimson; video real de 93 s (selfie oscuro) en modo crimson; modo personaje de punta a punta desde un guion de 30 s. **No probado con un video real filmado por el usuario**: el recorte por color puede dejar huecos en ropa blanca.
+Probado en Windows: cuento infantil de 34 s de punta a punta (voz, mundos, personajes, moraleja, FIN); clip limpio de presentador (español, 18 s) en modos normal y crimson; video real de 93 s (selfie oscuro) en modo crimson; modo personaje de punta a punta desde un guion de 30 s. **No probado con un video real filmado por el usuario**: el recorte por color puede dejar huecos en ropa blanca.

@@ -3,6 +3,8 @@
 // terminal, grid, meter, rain, notifs, rating, image, clip.
 import { AbsoluteFill, Easing, Img, OffthreadVideo, interpolate, staticFile } from 'remotion';
 import { Gloss, Small, useT, prog, R, fit, F, glossFill, TH, stickerOutline, clamp, FPS } from './Cg';
+import { STORY_LAYOUTS, FULL_LAYOUTS } from './Story';
+import { GENERAL_LAYOUTS } from './General';
 
 const pop = (t, at, d = 0.38) => interpolate(t, [at, at + d], [0, 1], { ...clamp, easing: Easing.out(Easing.back(1.7)) });
 const fade = (t, at, d = 0.3) => interpolate(t, [at, at + d], [0, 1], clamp);
@@ -348,7 +350,9 @@ const Clip = ({ sc, s }) => {
   );
 };
 
-export const LAYOUTS = { phone: Phone, stat: Stat, chart: Chart, steps: Steps, checklist: Checklist, compare: Compare, quote: Quote, chat: Chat, browser: Browser, terminal: Terminal, grid: Grid, meter: Meter, rain: Rain, notifs: Notifs, rating: Rating, image: ImageFull, clip: Clip };
+const CORE = { phone: Phone, stat: Stat, chart: Chart, steps: Steps, checklist: Checklist, compare: Compare, quote: Quote, chat: Chat, browser: Browser, terminal: Terminal, grid: Grid, meter: Meter, rain: Rain, notifs: Notifs, rating: Rating, image: ImageFull, clip: Clip };
+export const LAYOUTS = { ...CORE, ...GENERAL_LAYOUTS, ...STORY_LAYOUTS };
+export const isFull = (sc) => FULL_LAYOUTS.includes(sc.layout) || sc.layout === 'image';
 
 export const BrollBody = ({ sc, s }) => {
   const L = LAYOUTS[sc.layout || 'phone'] || Phone;

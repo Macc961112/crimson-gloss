@@ -50,7 +50,9 @@ def prefix_media(o):
         return [prefix_media(x) for x in o]
     return o
 
-LAYOUTS = 'phone stat chart steps checklist compare quote chat browser terminal grid meter rain notifs rating image clip'.split()
+LAYOUTS = ('phone stat chart steps checklist compare quote chat browser terminal grid meter rain notifs rating image clip '
+           'split timeline headline polaroids price callout progress countdown reaction '
+           'scene storybook title theend moral speech counting letter shapes journey magic').split()
 
 def validate(plan, work):
     errs = []
@@ -74,7 +76,7 @@ def write_report(work, plan, final):
     pr = json.load(open(os.path.join(work, 'prepare.json'))) if os.path.exists(os.path.join(work, 'prepare.json')) else {}
     tr = json.load(open(os.path.join(work, 'transcript.json'), encoding='utf-8')) if os.path.exists(os.path.join(work, 'transcript.json')) else {}
     normal = bool(plan.get('captions')) and not plan.get('scenes')
-    mode = 'personaje animado por código (Crimson Gloss)' if plan.get('character') else ('normal (limpio: subtítulos + zooms)' if normal else 'Crimson Gloss')
+    mode = 'cuento infantil ilustrado por código' if plan.get('mode') == 'cuento' else 'personaje animado por código (Crimson Gloss)' if plan.get('character') else ('normal (limpio: subtítulos + zooms)' if normal else 'Crimson Gloss')
     L = ['# Informe de edición', '', f"**Modo:** {mode}", '']
     if plan.get('character'):
         ch = plan['character']

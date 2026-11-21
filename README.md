@@ -2,7 +2,7 @@
 
 Dale a Claude Code **un video tuyo hablando a cámara** —o solo **un guion**— y te devuelve el reel **ya editado**, con un informe que te explica **todo lo que hizo y por qué**.
 
-Tiene tres modos:
+Tiene cuatro modos (normal, crimson, personaje y **cuento infantil**):
 
 | | **Normal** | **Crimson** |
 |---|---|---|
@@ -20,8 +20,17 @@ Solo un **guion** (o tu voz) → un presentador **animado por código**: sincron
 
 ---
 
-### Catálogo de B-roll (17 tipos)
-Las escenas a pantalla completa no son una sola plantilla: `phone`, `stat` (número que cuenta), `chart` (línea/barras), `steps`, `checklist`, `compare`, `quote`, `chat`, `browser`, `terminal`, `grid`, `meter`, `rain`, `notifs`, `rating`, `image` (tu foto con zoom) y `clip` (tu video). En modo personaje se **eligen solos según lo que dice el guion** («creció 300 %» → cifra animada, «entra a tusitio.com» → navegador que escribe la URL y hace clic, «primero, segundo, tercero» → pasos…). Detalle y parámetros en [docs/COMO_FUNCIONA.md](docs/COMO_FUNCIONA.md#9-catálogo-de-b-roll).
+### Modo cuento (cuentos infantiles y educativos)
+Un guion de cuento → **video ilustrado**: portada «Había una vez…», páginas con el texto **resaltado palabra a palabra** mientras se narra, ilustraciones animadas con **12 mundos** (bosque, mar, espacio, castillo, nieve…) y personajes (~80 animales y figuras) que caminan, vuelan, nadan o saltan según el verbo, **globos de diálogo**, escena de magia, **moraleja** y «FIN». También contenido educativo: **contar, letras, formas y colores**, y mapa del tesoro.
+
+![cuento](docs/demo-cuento.gif)
+
+Todos los layouts de cuentos, educativos y generales:
+
+![catalogo-cuentos](docs/demo-catalogo-cuentos.gif)
+
+### Catálogo de B-roll (37 tipos)
+Las escenas a pantalla completa no son una sola plantilla: `phone`, `stat` (número que cuenta), `chart` (línea/barras), `steps`, `checklist`, `compare`, `quote`, `chat`, `browser`, `terminal`, `grid`, `meter`, `rain`, `notifs`, `rating`, `image` (tu foto con zoom) y `clip` (tu video); más **generales** (`split`, `timeline`, `headline`, `polaroids`, `price`, `callout`, `progress`, `countdown`, `reaction`) y **de cuentos y educativos** (`scene`, `storybook`, `title`, `theend`, `moral`, `speech`, `counting`, `letter`, `shapes`, `journey`, `magic`). Guía con fuentes: [reference/broll-guide.md](crimson-gloss/reference/broll-guide.md). En modo personaje se **eligen solos según lo que dice el guion** («creció 300 %» → cifra animada, «entra a tusitio.com» → navegador que escribe la URL y hace clic, «primero, segundo, tercero» → pasos…). Detalle y parámetros en [docs/COMO_FUNCIONA.md](docs/COMO_FUNCIONA.md#9-catálogo-de-b-roll).
 
 ![catalogo](docs/demo-catalogo.gif)
 
@@ -44,6 +53,7 @@ Instalación manual: copia la carpeta [`crimson-gloss/`](crimson-gloss) a `~/.cl
 En Claude Code, dale la ruta de tu video:
 
 - `Edítame este video: C:\videos\yo.mp4` → modo **normal**
+- `Hazme un cuento infantil de un conejo valiente que ayuda a un zorro` → modo **cuento**
 - `Hazme un video de 40 s sobre cómo ahorrar, con un muñeco animado` → modo **personaje** (escribe el guion, la voz y el video)
 - `Ponle subtítulos y quítale los silencios` → modo **normal**
 - `Hazlo estilo crimson` / `tipo crimson` → modo **crimson**

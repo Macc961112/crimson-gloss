@@ -2,7 +2,7 @@
 import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate, random, spring, staticFile, useCurrentFrame } from 'remotion';
 import { loadFont } from '@remotion/google-fonts/BricolageGrotesque';
 import { Character, SetWall, SetProps, SetFloor } from './Character';
-import { BrollBody } from './Broll';
+import { BrollBody, isFull } from './Broll';
 
 const F = loadFont().fontFamily;
 export let FPS = 30; // se fija desde plan.fps en <Cg>
@@ -207,6 +207,7 @@ const InsertScene = ({ sc }) => {
   const s = sc.from + 0.12;
   const out = prog(t, sc.to - 0.2, sc.to + 0.1);
   const [c1, c2, c3] = BGS[sc.bg] || BGS.sky;
+  if (isFull(sc)) return <AbsoluteFill style={{ opacity: 1 - out * 0.4, filter: `blur(${out * 30}px)` }}><BrollBody sc={sc} s={s} /></AbsoluteFill>;
   return (
     <AbsoluteFill style={{ background: `linear-gradient(180deg, ${c1} 0%, ${c2} 55%, ${c3} 100%)`, filter: `blur(${out * 50}px)`, opacity: 1 - out * 0.4 }}>
       {Array.from({ length: 16 }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, -100, 1000) + Math.sin(t * 0.6 + i) * 16, top: R(i + 30, 150, 1700), width: R(i + 60, 260, 520), height: R(i + 60, 200, 380), borderRadius: '50%', background: '#fff', opacity: R(i + 90, 0.18, 0.5), filter: 'blur(30px)' }} />)}

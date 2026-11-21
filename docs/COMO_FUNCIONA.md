@@ -143,7 +143,7 @@ render.py work --still 1 5 10  →  render.py work --out final.mp4 --format both
 - La sincronía es por letras (muy buena en español, aproximada en inglés).
 - La voz de `edge-tts` necesita internet y envía el texto a Microsoft.
 
-## 9. Catálogo de B-roll
+## 9. Catálogo de B-roll (37 layouts)
 
 Una escena `insert` cubre al presentador 2–4 s. Se compone de: **fondo** (`bg`), **cabecera** (`lines`) y un **layout**. Hay 17:
 
@@ -172,7 +172,24 @@ Una escena `insert` cubre al presentador 2–4 s. Se compone de: **fondo** (`bg`
 
 **Qué es automático y qué conviene revisar:** la elección del layout y sus textos salen de las palabras del guion (nada se inventa: el chat usa tu frase, el terminal también), pero la etiqueta de una cifra puede quedar rara («ellos vuelve»); corrígela a mano.
 
-## 10. Límites generales
+## 10. Modo cuento
+
+`character.py plan --story` (sin presentador): la narración manda y todo lo demás sale de las palabras del guion.
+
+1. **Frases → láminas.** Cada frase es una escena (las muy cortas se unen). La primera, si hay `--title`, queda cubierta por la portada.
+2. **Mundo.** Se detecta por palabras del lugar (`bosque`, `mar`, `castillo`, `espacio`, `granja`, `nieve`, `noche`…) y se mantiene hasta que cambia.
+3. **Personajes.** Cada animal o personaje nombrado (≈ 80, en `lexicon.py`) pasa a ser un actor (emoji). Aparece cuando se dice su nombre. Hasta 3 por escena; el mismo emoji siempre para el mismo personaje.
+4. **Movimiento por verbo.** `camina/corre` → `walk`; `vuela` → `fly`; `nada` → `swim`; `salta/brinca` → `bounce`; `baila/canta` → `sway`; `duerme` → `float`.
+5. **Diálogo.** El texto entre comillas se muestra como globo sobre el primer personaje en el momento exacto en que se dice.
+6. **Páginas con lectura.** El layout `storybook` resalta cada palabra con sus tiempos reales (`words`), una de cada tres láminas pasa a pantalla completa (`scene`) para dar ritmo (`--layout` lo cambia).
+7. **Especiales.** «magia, varita, hechizo» → `magic`; «Moraleja: …» → `moral`; al final, `theend` («FIN») con confeti.
+8. **Educativo.** `counting`, `letter`, `shapes`, `journey` los añades tú en `plan.json` (ver catálogo).
+
+El **mundo** se dibuja con capas: cielo (degradado, sol o estrellas), nubes que se desplazan, colinas, decorado lejano y cercano con *parallax* (`pan`), suelo o agua con olas, y efectos (nieve, burbujas, hojas, destellos).
+
+**Límites:** son ilustraciones de emojis (consistentes pero no personalizadas); un animal que no esté en el léxico no aparece hasta que lo añadas; no hay giro de los personajes salvo reflejarlos al moverse.
+
+## 11. Límites generales
 - Probado en Windows con un clip limpio en español, no con un video real filmado.
 - No detecta repeticiones/tomas falsas: solo corta **silencios**.
 - La transcripción local se equivoca con nombres propios; hay que corregirlos.

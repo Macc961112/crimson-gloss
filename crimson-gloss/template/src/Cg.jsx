@@ -14,7 +14,8 @@ const DEFAULT_TH = { accent: '#e10600', dark: '#7a0012', light: '#ff2a2a', soft:
 let TH = DEFAULT_TH; // se fija al renderizar <Cg>
 
 // --- Texto -------------------------------------------------------------------
-const glossFill = () => ({ backgroundImage: `linear-gradient(180deg, ${TH.dark} 0%, #d0000f 45%, ${TH.light} 100%)`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent' });
+// theme.mid / theme.outline: para fondos oscuros (rojo más claro + borde blanco fino) y que el texto se lea
+const glossFill = () => ({ backgroundImage: `linear-gradient(180deg, ${TH.dark} 0%, ${TH.mid || '#d0000f'} 45%, ${TH.light} 100%)`, WebkitBackgroundClip: 'text', backgroundClip: 'text', color: 'transparent', ...(TH.outline ? { WebkitTextStroke: TH.outline, paintOrder: 'stroke fill' } : {}) });
 const cw = (c) => (c === ' ' ? 0.3 : /[A-ZÁÉÍÓÚÑ0-9?¡!]/.test(c) ? 0.7 : 0.56); // ancho por carácter en em (mayúsculas más anchas)
 const fit = (text, maxW, maxSize) => Math.max(40, Math.min(maxSize, maxW / Math.max(...text.split('\n').map((l) => l.split('').reduce((a, c) => a + cw(c), 0)))));
 
@@ -41,7 +42,7 @@ const Small = ({ children, at, until, size = 44, white }) => {
   if (t < at - 0.1) return null;
   const p = prog(t, at - 0.1, at + 0.2), out = until === undefined ? 0 : prog(t, until, until + 0.2);
   if (out >= 1) return null;
-  return <div style={{ fontFamily: F, fontWeight: 500, fontStyle: 'italic', fontSize: size, color: white ? '#fff' : TH.ink, letterSpacing: '-0.04em', textShadow: white ? `0 0 14px ${TH.soft}` : undefined, opacity: p * (1 - out), filter: `blur(${(1 - p) * 8 + out * 14}px)`, transform: `translateY(${(1 - p) * 20}px) skewX(-8deg)`, whiteSpace: 'nowrap' }}>{children}</div>;
+  return <div style={{ fontFamily: F, fontWeight: 500, fontStyle: 'italic', fontSize: size, color: white ? '#fff' : TH.ink, letterSpacing: '-0.04em', textShadow: white ? `0 0 14px ${TH.soft}` : '0 2px 10px #000c', opacity: p * (1 - out), filter: `blur(${(1 - p) * 8 + out * 14}px)`, transform: `translateY(${(1 - p) * 20}px) skewX(-8deg)`, whiteSpace: 'nowrap' }}>{children}</div>;
 };
 
 const Pill = ({ children, at, until, size = 44 }) => {

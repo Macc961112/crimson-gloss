@@ -106,6 +106,8 @@ Mira especialmente: texto cortado, tarjetas sobre la cara, inserto ilustrando la
 - Recorte feo (huecos en ropa blanca): `--matte none` o graba con fondo de otro color.
 - Transcripción con errores: usa `--model medium` en `prepare.py` o `--fix` en `autoplan.py`.
 - Subtítulos tapan algo: `--y` más alto/bajo.
+- **Video oscuro / selfie en primer plano** (probado con un video real): no uses `top`/`aboveHead` si la cara ocupa la parte alta; pon el texto bajo la barbilla con `y` explícito (≈ 880 para la palabra gloss, 800 para la pequeña) y `align:"center"`. Sube el contraste con `theme`: `{"dark":"#e0102a","mid":"#ff3b3b","light":"#ff8a8a","outline":"2px #ffffff","ink":"#ffd0d6"}`. Pon `"halo": false` en las escenas para que la trama de puntos no cubra la cara.
+- Videos largos (≥ 1 min): una escena por frase clave (≈ 20-25), sin dejar tramos largos sin texto; los insertos solo en las ideas centrales (3-4 en 90 s).
 - Los emojis usan la fuente del sistema; para calidad máxima pide imágenes en `work/assets/`.
 
 ## Probado / no probado

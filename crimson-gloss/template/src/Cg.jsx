@@ -133,7 +133,22 @@ const Card = ({ at, until, x, y, w = 320, h = 460, rot = 0, from = [0, 300], lab
 };
 
 // --- Posiciones (slots) relativas a la cabeza del presentador --------------------
-const slots = (ht) => ({
+const SLOTS_LAND = {
+  gloss: { top: { y: 300, max: 300 }, second: { y: 610, max: 220 }, aboveHead: { y: 300, max: 300 }, bottom: { y: 780, max: 190 }, footer: { y: 930, max: 130 } },
+  small: { tl: { x: 90, y: 190 }, tr: { x: 90, y: 150 }, lead: { x: 90, y: 230 }, sub: { x: 90, y: 560 }, bottom: { x: 90, y: 990 } },
+  pill: { left: { x: 90, y: 740 }, right: { x: 360, y: 740 }, url: { x: 90, y: 980 } },
+  card: {
+    aboveHead: { x: 1560, y: 110, w: 220, h: 300, rot: 4, from: [-220, 300] },
+    left1: { x: 900, y: 520, w: 190, h: 300, rot: -6, from: [330, 100] },
+    left2: { x: 880, y: 300, w: 200, h: 320, rot: 4, from: [340, 60] },
+    left3: { x: 920, y: 700, w: 230, h: 300, rot: -3, from: [330, -80] },
+    right1: { x: 1650, y: 430, w: 220, h: 290, rot: 6, from: [-260, 200] },
+    right2: { x: 1620, y: 200, w: 250, h: 380, rot: 5, from: [-250, 300] },
+  },
+};
+const LAND_CX = 1340; // centro del presentador en horizontal
+
+const slots = (ht, land) => land ? SLOTS_LAND : ({
   gloss: { top: { y: 130, max: 420 }, second: { y: 430, max: 260 }, aboveHead: { y: ht - 380, max: 330 }, bottom: { y: 1180, max: 210 }, footer: { y: 1620, max: 150 } },
   small: { tl: { x: 90, y: 62 }, tr: { r: 90, y: 62 }, lead: { x: 100, y: ht - 430 }, sub: { x: 110, y: 580 }, bottom: { x: 0, y: 1560, center: true } },
   pill: { left: { x: 70, y: 540 }, right: { r: 70, y: 540 }, url: { x: 60, y: 1650 } },
@@ -150,8 +165,8 @@ const slots = (ht) => ({
 const place = (s) => (s.center ? { left: 0, right: 0, display: 'flex', justifyContent: 'center', top: s.y } : s.r !== undefined ? { right: s.r, top: s.y } : { left: s.x ?? 60, top: s.y });
 
 // Elemento de escena presentador. layer: 'back' (tarjetas, cintas, halo) | 'front' (texto)
-const Element = ({ el, sc, ht, layer, hasCutout }) => {
-  const S = slots(ht);
+const Element = ({ el, sc, ht, layer, hasCutout, land }) => {
+  const S = slots(ht, land);
   const until = el.until ?? (el.kind === 'gloss' ? sc.to - 0.05 : sc.to);
   if (el.kind === 'card') {
     if (layer !== 'back') return null;
@@ -159,7 +174,7 @@ const Element = ({ el, sc, ht, layer, hasCutout }) => {
     const target = [g.x + g.w / 2, g.y + g.h / 2];
     return (
       <>
-        {hasCutout && <Ribbon at={el.at - 0.1} d={trail([540, ht + 420], target)} />}
+        {hasCutout && <Ribbon at={el.at - 0.1} d={trail(land ? [LAND_CX, 560] : [540, ht + 420], target)} />}
         <Card at={el.at} until={until} {...g} label={el.label} icon={el.icon} content={el.content} />
       </>
     );
@@ -167,9 +182,9 @@ const Element = ({ el, sc, ht, layer, hasCutout }) => {
   if (layer !== 'front') return null;
   if (el.kind === 'gloss') {
     const g = S.gloss[el.slot] || S.gloss.top;
-    const size = el.size ?? fit(el.text, el.maxWidth ?? 930, g.max);
+    const size = el.size ?? fit(el.text, el.maxWidth ?? (land ? 860 : 930), g.max);
     const y = el.y ?? g.y;
-    const style = el.align === 'center' ? { left: 0, right: 0, display: 'flex', justifyContent: 'center', top: y } : { left: el.x ?? 60, top: y };
+    const style = el.align === 'center' ? { left: 0, ...(land ? { width: 960 } : { right: 0 }), display: 'flex', justifyContent: 'center', top: y } : { left: el.x ?? (land ? 90 : 60), top: y };
     return <div style={{ position: 'absolute', ...style }}><Gloss text={el.text} at={el.at} until={until} size={size} white={el.white} /></div>;
   }
   if (el.kind === 'small') {
@@ -186,15 +201,16 @@ const Element = ({ el, sc, ht, layer, hasCutout }) => {
 // Escena presentador: capa de fondo + capa de texto
 const PresenterScene = ({ sc, plan, layer }) => {
   const t = useT();
+  const { W, H } = useDims(), land = W > H && !!plan.character;
   if (t < sc.from || t >= sc.to + 0.3) return null;
   const ht = 1920 - (1920 - (plan.headTop ?? (plan.character ? 718 : 780))) * zoomOf(sc); // la cabeza baja cuando se aleja el video
   const els = sc.elements || [];
   return (
     <>
-      {layer === 'back' && sc.halo !== false && <Halftone at={sc.from} x={540} y={ht + 220} size={1100} />}
-      {layer === 'back' && sc.from > 0.5 && (plan.cutout || plan.character) && <Ribbon at={sc.from - 0.55} d={`M-60 ${(plan.floorY ?? 1580) + 30} C 300 ${(plan.floorY ?? 1580) - 70} 700 ${(plan.floorY ?? 1580) + 110} 1140 ${(plan.floorY ?? 1580) - 10}`} />}
-      {layer === 'front' && els.length > 0 && <Pixels at={els[0].at - 0.12} x={sc.pixelX ?? 140} y={sc.pixelY ?? 220} />}
-      {els.map((el, i) => <Element key={i} el={el} sc={sc} ht={ht} layer={layer} hasCutout={!!(plan.cutout || plan.character)} />)}
+      {layer === 'back' && sc.halo !== false && <Halftone at={sc.from} x={land ? LAND_CX : 540} y={land ? 540 : ht + 220} size={land ? 900 : 1100} />}
+      {layer === 'back' && sc.from > 0.5 && (plan.cutout || plan.character) && <Ribbon at={sc.from - 0.55} d={land ? `M-60 ${H * 0.92 + 30} C ${W * 0.3} ${H * 0.92 - 70} ${W * 0.7} ${H * 0.92 + 110} ${W + 60} ${H * 0.92 - 10}` : `M-60 ${(plan.floorY ?? 1580) + 30} C 300 ${(plan.floorY ?? 1580) - 70} 700 ${(plan.floorY ?? 1580) + 110} 1140 ${(plan.floorY ?? 1580) - 10}`} />}
+      {layer === 'front' && els.length > 0 && <Pixels at={els[0].at - 0.12} x={sc.pixelX ?? (land ? 90 : 140)} y={sc.pixelY ?? (land ? 110 : 220)} />}
+      {els.map((el, i) => <Element key={i} el={el} sc={sc} ht={ht} layer={layer} hasCutout={!!(plan.cutout || plan.character)} land={land} />)}
     </>
   );
 };
@@ -330,12 +346,13 @@ const Cta = ({ cfg }) => {
 // --- Modo personaje: cámara con parallax, personaje y música con ducking ---------------
 const Stage = ({ plan, depth = 1, children }) => {
   const t = useT();
-  const z = 1 + (zoomAt(plan, t) - 1) * depth;
+  const { W, H } = useDims(), ld = W > H;
+  const z = 1 + ((ld ? Math.min(zoomAt(plan, t), 1.05) : zoomAt(plan, t)) - 1) * depth;  // en horizontal el zoom no puede sacar la cabeza del cuadro
   const sc = (plan.scenes || []).find((x) => x.type !== 'insert' && t >= x.from && t < x.to);
   const drift = sc ? 0.03 * prog(t, sc.from, sc.to, Easing.linear) : 0; // empuje lento de cámara
   return (
-    <AbsoluteFill style={{ transformOrigin: '50% 100%', transform: `scale(${z * (1 + drift * depth)})` }}>
-      <AbsoluteFill style={{ transformOrigin: '50% 38%', transform: `scale(${1 + (punchAt(plan, t) - 1) * depth})` }}>{children}</AbsoluteFill>
+    <AbsoluteFill style={{ transformOrigin: ld ? '70% 92%' : '50% 100%', transform: `scale(${z * (1 + drift * depth)})` }}>
+      <AbsoluteFill style={{ transformOrigin: ld ? '70% 45%' : '50% 38%', transform: `scale(${1 + (punchAt(plan, t) - 1) * depth})` }}>{children}</AbsoluteFill>
     </AbsoluteFill>
   );
 };
@@ -344,7 +361,8 @@ const CharacterLayer = ({ plan }) => {
   const t = useT();
   const ch = plan.character;
   const emph = (plan.scenes || []).flatMap((s) => (s.elements || []).filter((e) => e.kind === 'gloss').map((e) => e.at)).concat(ch.emph || []);
-  return <div style={{ position: 'absolute', left: 170, top: 640 }}><Character cfg={ch.cfg} t={t} words={ch.words || []} gestures={ch.gestures || []} emph={emph} W={740} /></div>;
+  const { W, H } = useDims(), ld = W > H, cw = ld ? H * 0.56 : 740;
+  return <div style={{ position: 'absolute', left: ld ? LAND_CX - cw / 2 : 170, top: ld ? H * 0.9 - cw * 1.4 * (548 / 560) : 640 }}><Character cfg={ch.cfg} t={t} words={ch.words || []} gestures={ch.gestures || []} emph={emph} W={cw} /></div>;
 };
 
 const speechSpans = (words) => {
@@ -393,7 +411,7 @@ export const Cg = ({ plan }) => {
   const flashes = inserts.flatMap((s) => [s.from + 0.12, s.to + 0.1]);
   const gray = (plan.introFade === false || plan.character) ? 0 : 1 - prog(t, 0, 0.35, Easing.linear);
   const layerScenes = (layer) => scenes.filter((s) => s.type !== 'insert').map((s, i) => <PresenterScene key={i} sc={s} plan={plan} layer={layer} />);
-  const useFit = land && (scenes.some((x) => x.type !== 'insert') || !!plan.character);
+  const useFit = land && !plan.character && scenes.some((x) => x.type !== 'insert');
   const layers = (
     <>
       {plan.character

@@ -16,6 +16,10 @@ Solo un **guion** (o tu voz) → un presentador **animado por código**: sincron
 
 ![personaje](docs/demo-personaje.gif)
 
+Y en horizontal (16:9), con el texto a la izquierda y el personaje a la derecha:
+
+![personaje horizontal](docs/demo-personaje-horizontal.gif)
+
 > Las demos usan un presentador dibujado con código (no una persona real) para no usar material de nadie. Con tu video, la persona eres tú.
 
 ---
@@ -35,7 +39,7 @@ Las escenas a pantalla completa no son una sola plantilla: `phone`, `stat` (núm
 ![catalogo](docs/demo-catalogo.gif)
 
 ### Vertical y horizontal
-Todo funciona en **9:16** (Reels, TikTok, Shorts) y en **16:9** (YouTube, presentaciones). Los cuentos y el B-roll se recomponen de verdad para pantalla ancha (la ilustración a la izquierda y el texto a la derecha; el visual a la derecha y el titular a la izquierda). ![cuento horizontal](docs/demo-cuento-horizontal.gif)
+Todo funciona en **9:16** (Reels, TikTok, Shorts) y en **16:9** (YouTube, presentaciones). Los cuentos, el B-roll y el **personaje animado** se recomponen de verdad para pantalla ancha (cuento: ilustración a la izquierda y texto a la derecha; B-roll y personaje: titular grande a la izquierda y el visual o el presentador a la derecha). ![cuento horizontal](docs/demo-cuento-horizontal.gif)
 
 Elige con `--orientation horizontal` o cambia solo al renderizar: `render.py work --orientation horizontal`.
 

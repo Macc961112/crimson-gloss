@@ -296,8 +296,7 @@ def auto_scenes(tr, dur, url=None, broll=True):
             elif ch: els.append({'kind': 'small', 'slot': 'tl', 'text': ' '.join(w['w'] for w in ch[:4]), 'at': round(ch[0]['s'], 2), 'size': 50})
             if emo:
                 side = ci % 2
-                els.append({'kind': 'card', 'slot': 'right1' if side else 'left1', 'at': round(kw['s'] + 0.12, 2), 'content': {'emoji': emo},
-                            **({} if side else {'x': 80, 'w': 230, 'h': 300, 'rot': -6, 'from': [330, 120]})})
+                els.append({'kind': 'card', 'slot': 'right1' if side else 'left1', 'at': round(kw['s'] + 0.12, 2), 'content': {'emoji': emo}})
             sc = {'type': 'presenter', 'zoom': ZOOMS[ci % len(ZOOMS)], 'elements': els}
         sc['from'] = 0.0 if ci == 0 else round(max(0.0, t0 - 0.18), 2)
         if sc['type'] == 'insert':
@@ -452,8 +451,8 @@ def cmd_plan(a):
         'character': {'cfg': cfg, 'words': tr['words'], 'gestures': auto_gestures(tr['words'], scenes)},
         'scenes': scenes,
     }
-    if a.captions: plan['captions'] = {'words': tr['words'], 'perLine': 3, 'y': 1500, 'size': 70, 'activeText': '#ffffff'}
-    if a.cta: plan['cta'] = {'text': a.cta, 'at': round(max(0.5, dur - 3.0), 2), 'y': 1700, 'activeText': '#ffffff'}
+    if a.captions: plan['captions'] = {'words': tr['words'], 'perLine': 3, 'activeText': '#ffffff'}
+    if a.cta: plan['cta'] = {'text': a.cta, 'at': round(max(0.5, dur - 3.0), 2), 'activeText': '#ffffff'}
     json.dump(plan, open(os.path.join(work, 'plan.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
     ins = sum(1 for s in scenes if s['type'] == 'insert')
     kinds = sorted({s.get('layout', 'phone') for s in scenes if s['type'] == 'insert'})

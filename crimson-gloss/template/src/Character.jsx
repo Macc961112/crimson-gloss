@@ -1,6 +1,7 @@
 // Personaje 2D por capas, animado por código: sincronía labial por visemas, parpadeo, mirada, cejas,
 // respiración, cabeceo, gestos de brazos/manos con cinemática (hombro-codo-muñeca) y un set con parallax.
 import { AbsoluteFill, random } from 'remotion';
+import { useDims } from './Cg';
 
 const R = (s, lo = 0, hi = 1) => lo + random(s) * (hi - lo);
 const c01 = (x) => Math.max(0, Math.min(1, x));
@@ -215,29 +216,37 @@ export const SetWall = ({ set = {}, t, accent = '#e10600' }) => {
 };
 
 export const SetProps = ({ set = {}, t, accent = '#e10600' }) => {
+  const { W, H } = useDims(), land = W > H;
   const night = set.kind === 'night';
   const sway = Math.sin(t * 0.9) * 2;
+  const sc = land ? (H * 0.86) / 1650 : 1;                 // el decorado está dibujado para un suelo en y = 1650
+  const lampX = land ? W * 0.5 : 170, plantX = land ? W * 0.94 : 905;
   return (
     <AbsoluteFill>
-      <svg width="1080" height="1920" style={{ position: 'absolute', inset: 0 }}>
+      <svg width={W} height={H} style={{ position: 'absolute', inset: 0 }}>
         <defs><radialGradient id="cgGlow"><stop offset="0" stopColor="#ffe3a8" stopOpacity=".75" /><stop offset="1" stopColor="#ffe3a8" stopOpacity="0" /></radialGradient></defs>
-        <ellipse cx="170" cy="880" rx="260" ry="320" fill="url(#cgGlow)" opacity={night ? 1 : 0.55} />
-        <rect x="164" y="1010" width="12" height="640" rx="6" fill="#2b2b33" /><ellipse cx="170" cy="1655" rx="50" ry="9" fill="#2b2b33" />
-        <path d="M104 1010 L236 1010 L206 880 L134 880Z" fill="#fff2d1" stroke="#e0c58a" strokeWidth="5" />
-        <rect x="860" y="1520" width="90" height="120" rx="14" fill={accent} /><rect x="852" y="1506" width="106" height="24" rx="10" fill={accent} /><rect x="856" y="1630" width="98" height="10" fill="#0003" />
-        {[[-70, 150, 0], [-35, 175, 0], [0, 190, 0], [35, 170, 0], [70, 145, 0], [-100, 110, 0], [100, 105, 0]].map(([a, h], i) => <ellipse key={i} cx="905" cy={1500 - h / 2} rx="20" ry={h / 2} fill={i % 2 ? '#2d8a57' : '#3fae6e'} transform={`rotate(${a + sway * (i % 2 ? 1 : -1)} 905 1505)`} />)}
+        <g transform={`translate(${lampX - 170 * sc} 0) scale(${sc})`}>
+          <ellipse cx="170" cy="880" rx="260" ry="320" fill="url(#cgGlow)" opacity={night ? 1 : 0.55} />
+          <rect x="164" y="1010" width="12" height="640" rx="6" fill="#2b2b33" /><ellipse cx="170" cy="1655" rx="50" ry="9" fill="#2b2b33" />
+          <path d="M104 1010 L236 1010 L206 880 L134 880Z" fill="#fff2d1" stroke="#e0c58a" strokeWidth="5" />
+        </g>
+        <g transform={`translate(${plantX - 905 * sc} 0) scale(${sc})`}>
+          <rect x="860" y="1520" width="90" height="120" rx="14" fill={accent} /><rect x="852" y="1506" width="106" height="24" rx="10" fill={accent} /><rect x="856" y="1630" width="98" height="10" fill="#0003" />
+          {[[-70, 150], [-35, 175], [0, 190], [35, 170], [70, 145], [-100, 110], [100, 105]].map(([a, h], i) => <ellipse key={i} cx="905" cy={1500 - h / 2} rx="20" ry={h / 2} fill={i % 2 ? '#2d8a57' : '#3fae6e'} transform={`rotate(${a + sway * (i % 2 ? 1 : -1)} 905 1505)`} />)}
+        </g>
       </svg>
     </AbsoluteFill>
   );
 };
 
 export const SetFloor = ({ set = {}, accent = '#e10600' }) => {
+  const { W, H } = useDims(), land = W > H, fy = land ? H * 0.86 : 1560, rcx = land ? 1340 : 540;
   const night = set.kind === 'night';
   return (
     <AbsoluteFill>
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 1560, bottom: 0, background: night ? 'linear-gradient(#171a3c, #0a0b1c)' : 'linear-gradient(#e6e4ec, #d2d0da)' }} />
-      <div style={{ position: 'absolute', left: 0, right: 0, top: 1556, height: 8, background: '#00000010' }} />
-      <div style={{ position: 'absolute', left: 150, top: 1612, width: 780, height: 120, borderRadius: '50%', background: `${accent}22`, border: `4px solid ${accent}33` }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: fy, bottom: 0, background: night ? 'linear-gradient(#171a3c, #0a0b1c)' : 'linear-gradient(#e6e4ec, #d2d0da)' }} />
+      <div style={{ position: 'absolute', left: 0, right: 0, top: fy - 4, height: 8, background: '#00000010' }} />
+      <div style={{ position: 'absolute', left: rcx - 390, top: fy + 52, width: 780, height: land ? 100 : 120, borderRadius: '50%', background: `${accent}22`, border: `4px solid ${accent}33` }} />
     </AbsoluteFill>
   );
 };

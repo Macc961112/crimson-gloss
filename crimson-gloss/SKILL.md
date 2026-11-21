@@ -144,7 +144,8 @@ Todos los modos funcionan en las dos orientaciones. Pregunta al usuario **dónde
 | **cuento** | nativo | **nativo**: mundos más anchos con decorado repetido, página de cuento con la ilustración a la izquierda y el texto a la derecha, portada/moraleja/FIN recompuestos |
 | **B-roll** (`insert`) | nativo | **dos columnas**: el texto grande a la izquierda y el visual (gráfica, chat, navegador…) a la derecha; `rain`, `reaction`, `image` a pantalla completa |
 | **normal** | nativo | **nativo**: subtítulos, zooms y rótulo escalados a la altura; el video se normaliza a 1920×1080 |
-| **crimson / personaje** | nativo | el presentador y su texto se componen en el lienzo vertical y se **encajan por altura** en el horizontal sobre un fondo ampliado (video desenfocado o el set del personaje) |
+| **personaje** | nativo | **nativo**: el personaje a la derecha y el texto grande a la izquierda; tarjetas y cintas salen por detrás de él; lámpara, planta, suelo y alfombra recolocados; zoom limitado para no cortar la cabeza |
+| **crimson** (con tu video) | nativo | el presentador y su texto se componen en el lienzo vertical y se **encajan por altura** sobre un fondo ampliado (video desenfocado) |
 
 - **Cómo se elige:** `prepare.py … --orientation vertical|horizontal|auto` (auto: horizontal si el video es más ancho que alto), `character.py plan … --orientation horizontal`, o cambiarlo al renderizar con `render.py work --orientation horizontal` (reescribe el plan; sirve para sacar las dos versiones del mismo plan).
 - `plan.json` guarda `"orientation": "horizontal"`. `autoplan.py` la hereda de `prepare.json`.

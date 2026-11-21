@@ -155,6 +155,13 @@ Todos los modos funcionan en las dos orientaciones. Pregunta al usuario **dónde
 - Los layouts de cuento no necesitan cambios al pasar de una orientación a otra: usan porcentajes del lienzo.
 
 ---
+## ZONAS SEGURAS (vertical 1080x1920)
+- Subtítulos: ancho útil 880 px (margen lateral 100; los botones de la app tapan la derecha), máx. 2 líneas, tamaño automático para que la palabra más larga quepa, contorno oscuro (legible sobre fondo claro u oscuro), base en 64 % de la altura y nunca por debajo del 78 %.
+- Rótulo (lower third) al 50 %; botón CTA al 78 % (por debajo queda la interfaz de Instagram/TikTok). Horizontal: subtítulos al 69 %, CTA al 84 %.
+- Estrellas (rating) y pasos se encogen para dejar ≥ 90 px de margen; la capa `image` muestra la imagen entera (contain) sobre su propio fondo difuminado.
+- Revisa siempre un fotograma de cada escena antes de entregar (`render.py --still T`).
+
+---
 ## GENERADOR DE ELEMENTOS (la skill no tiene una lista cerrada)
 Cuando el guion nombra algo que no tiene dibujo (un barquito de papel, un dinosaurio, una tetera…), **lo generas por código**: un JSON declarativo con capas SVG, parámetros de color, animaciones y estados. No se ejecuta código; solo se pinta SVG saneado.
 

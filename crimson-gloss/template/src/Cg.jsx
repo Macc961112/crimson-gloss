@@ -294,7 +294,7 @@ const PersonVideo = ({ plan, src, transparent }) => {
 // --- Modo normal: subtítulos palabra a palabra, rótulo y llamada a la acción ----------
 const Captions = ({ cfg }) => {
   const t = useT();
-  const { H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
+  const { W, H } = useDims(), land = W > H, sc = Math.min(1, (H / 1920) * 1.5);
   const ws = cfg.words || [];
   if (!ws.length) return null;
   const per = cfg.perLine ?? 3;
@@ -309,12 +309,23 @@ const Captions = ({ cfg }) => {
   if (!ch) return null;
   const k = prog(t, ch[0].s - 0.04, ch[0].s + 0.12);
   const emph = new Set((cfg.emphasis || []).map((x) => String(x).toLowerCase()));
+  // zona segura: márgenes laterales amplios (en vertical, los botones de la app tapan ~120 px a la derecha) y tamaño que
+  // siempre cabe: la palabra más larga entra en una línea y el bloque entero en dos líneas como máximo.
+  const avail = land ? Math.min(W - 240, 1500) : W - 200;
+  const txt = ch.map((w) => w.w.replace(/[.,;:]+$/, ''));
+  const CW = 0.64, PAD = 30, GAP = 18;
+  const sumLen = txt.reduce((a, x) => a + x.length, 0), maxLen = Math.max(...txt.map((x) => x.length));
+  const fitWord = (avail * 0.93 - PAD) / (maxLen * CW), fitTwo = (2 * avail * 0.8 - txt.length * (PAD + GAP)) / (sumLen * CW);
+  const size = Math.floor(Math.max(34, Math.min(cfg.size ?? Math.round(84 * sc), fitWord, fitTwo)));
+  const bottomMax = land ? H * 0.86 : H * 0.78, rows = txt.reduce((a, x) => a + x.length * CW * size + PAD + GAP, 0) > avail ? 2 : 1;
+  const top = Math.min(cfg.y ?? Math.round(H * (land ? 0.69 : 0.64)), bottomMax - rows * size * 1.2);
   return (
-    <div style={{ position: 'absolute', left: 60, right: 60, top: cfg.y ?? Math.round(H * 0.69), display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 18px', transform: `scale(${0.9 + k * 0.1}) translateY(${(1 - k) * 24}px)`, opacity: k }}>
-      {ch.map((w) => {
+    <div style={{ position: 'absolute', left: (W - avail) / 2 - (land ? 0 : 20), width: avail, top, display: 'flex', flexWrap: 'wrap', justifyContent: 'center', gap: '6px 14px', transform: `scale(${0.9 + k * 0.1}) translateY(${(1 - k) * 24}px)`, opacity: k }}>
+      {ch.map((w, j) => {
         const on = t >= w.s && t < w.e + 0.04;
         const em = emph.has(w.w.replace(/[^\p{L}\p{N}]/gu, '').toLowerCase());
-        return <span key={w.i} style={{ display: 'inline-block', fontFamily: F, fontWeight: 800, fontSize: cfg.size ?? Math.round(84 * sc), letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: 1.05, color: on ? (cfg.activeText ?? '#111') : em ? TH.accent : '#fff', background: on ? TH.accent : 'transparent', borderRadius: 16, padding: '0 14px', textShadow: on ? 'none' : '0 4px 0 #00000088, 0 0 18px #00000066', transform: `scale(${on ? 1.1 : 1})` }}>{w.w.replace(/[.,;:]+$/, '')}</span>;
+        // contorno oscuro grueso: legible sobre fondos claros, oscuros o con la cara detrás
+        return <span key={w.i} style={{ display: 'inline-block', fontFamily: F, fontWeight: 800, fontSize: size, letterSpacing: '-0.03em', textTransform: 'uppercase', lineHeight: 1.1, color: on ? (cfg.activeText ?? '#111') : em ? TH.accent : '#fff', background: on ? TH.accent : 'transparent', borderRadius: 16, padding: '0 14px', WebkitTextStroke: on ? '0' : `${Math.max(6, Math.round(size / 9))}px #0b0b10`, paintOrder: 'stroke fill', textShadow: on ? 'none' : '0 5px 0 #000000aa, 0 0 22px #00000088', transform: `scale(${on ? 1.06 : 1})` }}>{txt[j]}</span>;
       })}
     </div>
   );
@@ -322,12 +333,12 @@ const Captions = ({ cfg }) => {
 
 const Lower = ({ cfg }) => {
   const t = useT();
-  const { H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
+  const { W, H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
   const at = cfg.at ?? 0.4, to = at + (cfg.dur ?? 3.2);
   if (t < at || t > to + 0.4) return null;
   const k = prog(t, at, at + 0.35), o = prog(t, to, to + 0.3);
   return (
-    <div style={{ position: 'absolute', left: 60, top: cfg.y ?? Math.round(H * 0.57), transform: `translateX(${(1 - k) * -520 - o * 520}px)` }}>
+    <div style={{ position: 'absolute', left: 60, top: cfg.y ?? Math.round(H * (W > H ? 0.5 : 0.5)), transform: `translateX(${(1 - k) * -520 - o * 520}px)` }}>
       <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: Math.round(64 * sc), padding: '6px 28px 10px', borderRadius: 14, letterSpacing: '-0.03em', width: 'fit-content' }}>{cfg.name}</div>
       {cfg.role && <div style={{ background: '#111', color: '#fff', fontFamily: F, fontWeight: 500, fontSize: Math.round(34 * sc), padding: '6px 22px', borderRadius: '0 0 14px 14px', width: 'fit-content' }}>{cfg.role}</div>}
     </div>
@@ -336,11 +347,11 @@ const Lower = ({ cfg }) => {
 
 const Cta = ({ cfg }) => {
   const t = useT();
-  const { H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
+  const { W, H } = useDims(), sc = Math.min(1, (H / 1920) * 1.5);
   if (t < cfg.at) return null;
   const sp = spring({ frame: Math.round((t - cfg.at) * FPS), fps: FPS, config: { damping: 12 } });
   return (
-    <div style={{ position: 'absolute', left: 0, right: 0, top: cfg.y ?? Math.round(H * 0.85), display: 'flex', justifyContent: 'center' }}>
+    <div style={{ position: 'absolute', left: 0, right: 0, top: cfg.y ?? Math.round(H * (W > H ? 0.84 : 0.78)), display: 'flex', justifyContent: 'center' }}>
       <div style={{ background: TH.accent, color: cfg.activeText ?? '#111', fontFamily: F, fontWeight: 800, fontSize: Math.round(54 * sc), padding: '10px 38px 14px', borderRadius: 99, transform: `scale(${sp * (1 + 0.03 * Math.sin(t * 8))})`, boxShadow: `0 14px 40px ${TH.accent}66` }}>{cfg.text}</div>
     </div>
   );

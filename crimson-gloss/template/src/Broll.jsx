@@ -104,9 +104,9 @@ const Steps = ({ sc, s }) => {
       {items.map((it, i) => {
         const a = when(s, it, i, 0.75), k = pop(t, a);
         return (
-          <div key={i} style={{ width: 900, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+          <div key={i} style={{ width: 860, display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
             {i > 0 && <div style={{ width: 8, height: 44 * fade(t, a - 0.2), background: TH.accent, borderRadius: 4 }} />}
-            <div style={card({ width: 900, padding: '24px 34px', display: 'flex', alignItems: 'center', gap: 30, transform: `scale(${k}) translateX(${(1 - k) * 80}px)`, opacity: k })}>
+            <div style={card({ width: 860, padding: '24px 34px', display: 'flex', alignItems: 'center', gap: 30, transform: `scale(${Math.min(k, 1.03)}) translateX(${(1 - k) * 80}px)`, opacity: k })}>
               <div style={{ width: 100, height: 100, borderRadius: 50, background: TH.accent, color: '#fff', ...txt(66, '#fff', 800), display: 'grid', placeItems: 'center', flex: 'none' }}>{i + 1}</div>
               <div style={{ ...txt(it.text.length > 22 ? 50 : 60), flex: 1 }}>{it.text}</div>
               {it.emoji && <div style={{ fontSize: 84 }}>{it.emoji}</div>}
@@ -321,7 +321,7 @@ const Rating = ({ sc, s }) => {
   const t = useT(), r = sc.rating || {}, stars = r.stars ?? 5;
   return (
     <Body gap={20}>
-      <div style={{ display: 'flex', gap: 6 }}>{Array.from({ length: stars }, (_, i) => <div key={i} style={{ fontSize: 150, transform: `scale(${pop(t, s + 0.3 + i * 0.18)}) rotate(${(1 - pop(t, s + 0.3 + i * 0.18)) * 90}deg)`, filter: 'drop-shadow(0 10px 12px #0003)' }}>⭐</div>)}</div>
+      <div style={{ display: 'flex', gap: 6 }}>{Array.from({ length: stars }, (_, i) => <div key={i} style={{ fontSize: Math.min(150, Math.floor(820 / (stars * 1.3))), transform: `scale(${pop(t, s + 0.3 + i * 0.18)}) rotate(${(1 - pop(t, s + 0.3 + i * 0.18)) * 90}deg)`, filter: 'drop-shadow(0 10px 12px #0003)' }}>⭐</div>)}</div>
       <div style={{ ...glossFill(), fontFamily: F, fontWeight: 800, fontSize: 330, letterSpacing: '-0.05em', lineHeight: 1, transform: `skewX(-9deg) scale(${0.8 + 0.2 * pop(t, s + 1.2)})`, opacity: fade(t, s + 1.2) }}>{r.score || '5.0'}</div>
       {r.label && <div style={{ ...txt(64, isDark(sc) ? '#fff' : '#16130f', 600), fontStyle: 'italic', opacity: fade(t, s + 1.6) }}>{r.label}</div>}
     </Body>
@@ -333,7 +333,8 @@ const ImageFull = ({ sc, s }) => {
   const t = useT(), im = sc.image || {}, z = 1 + (im.zoom ?? 0.12) * prog(t, s, sc.to, Easing.linear);
   return (
     <AbsoluteFill>
-      <AbsoluteFill style={{ transform: `scale(${z}) translate(${(im.pan ?? 0) * (z - 1) * 100}px, 0)` }}><Img src={staticFile(im.src)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /></AbsoluteFill>
+      <AbsoluteFill><Img src={staticFile(im.src)} style={{ width: '100%', height: '100%', objectFit: 'cover', filter: 'blur(40px) brightness(.55)', transform: 'scale(1.2)' }} /></AbsoluteFill>
+      <AbsoluteFill style={{ transform: `scale(${z}) translate(${(im.pan ?? 0) * (z - 1) * 100}px, 0)` }}><Img src={staticFile(im.src)} style={{ width: '100%', height: '100%', objectFit: 'contain' }} /></AbsoluteFill>
       <AbsoluteFill style={{ background: 'linear-gradient(180deg, #000a 0%, transparent 32%, transparent 68%, #000a 100%)' }} />
     </AbsoluteFill>
   );

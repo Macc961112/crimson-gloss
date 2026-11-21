@@ -1,0 +1,43 @@
+{
+ "name": "snail",
+ "aliases": [
+  "caracol",
+  "caracola"
+ ],
+ "viewBox": "0 0 200 150",
+ "surface": "ground",
+ "params": {
+  "color": "#fb8c00"
+ },
+ "variants": [
+  "#fb8c00",
+  "#8e24aa",
+  "#43a047"
+ ],
+ "layers": [
+  {
+   "id": "cuerpo",
+   "svg": "<path d='M10 130 Q10 100 50 100 L150 100 Q196 100 190 130Z' fill='#d7b48a'/><path d='M150 100 Q160 50 176 40' stroke='#d7b48a' stroke-width='14' stroke-linecap='round' fill='none'/><circle cx='178' cy='38' r='6' fill='#222'/><path d='M168 44 Q150 30 150 22' stroke='#d7b48a' stroke-width='8' stroke-linecap='round' fill='none'/>",
+   "anim": [
+    {
+     "type": "slide",
+     "amp": 2,
+     "speed": 0.5
+    }
+   ]
+  },
+  {
+   "id": "concha",
+   "svg": "<circle cx='84' cy='76' r='56' fill='{{color}}'/><circle cx='84' cy='76' r='38' fill='none' stroke='{{color:dark}}' stroke-width='7'/><circle cx='84' cy='76' r='18' fill='none' stroke='{{color:dark}}' stroke-width='7'/>",
+   "anim": [
+    {
+     "type": "sway",
+     "amp": 2,
+     "speed": 0.5,
+     "origin": "84 130"
+    }
+   ]
+  }
+ ],
+ "states": {}
+}

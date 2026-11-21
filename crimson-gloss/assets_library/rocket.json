@@ -1,0 +1,50 @@
+{
+ "name": "rocket",
+ "aliases": [
+  "cohete",
+  "nave",
+  "nave espacial",
+  "rocket"
+ ],
+ "viewBox": "0 0 120 220",
+ "surface": "air",
+ "params": {
+  "color": "#e53935",
+  "c2": "#3aa0ff"
+ },
+ "variants": [
+  "#e53935",
+  "#3ecf70",
+  "#8a5cff"
+ ],
+ "layers": [
+  {
+   "id": "llama",
+   "svg": "<path d='M44 168 Q60 230 76 168Z' fill='#ffb300'/><path d='M50 168 Q60 210 70 168Z' fill='#fff3b0'/>",
+   "anim": [
+    {
+     "type": "pulse",
+     "amp": 0.12,
+     "speed": 3,
+     "origin": "60 168"
+    }
+   ]
+  },
+  {
+   "id": "aletas",
+   "svg": "<path d='M30 120 L8 170 L36 156Z M90 120 L112 170 L84 156Z' fill='{{color:dark}}'/>"
+  },
+  {
+   "id": "cuerpo",
+   "svg": "<path d='M60 6 Q100 50 92 160 L28 160 Q20 50 60 6Z' fill='#f4f4f8'/><path d='M60 6 Q80 26 86 60 L34 60 Q40 26 60 6Z' fill='{{color}}'/><circle cx='60' cy='90' r='16' fill='{{c2}}' stroke='#c9c9d3' stroke-width='5'/><rect x='28' y='140' width='64' height='18' fill='{{color:dark}}'/>",
+   "anim": [
+    {
+     "type": "bob",
+     "amp": 3,
+     "speed": 2
+    }
+   ]
+  }
+ ],
+ "states": {}
+}

@@ -1,0 +1,84 @@
+{
+ "name": "dinosaur",
+ "aliases": [
+  "dinosaurio",
+  "dino",
+  "t-rex"
+ ],
+ "viewBox": "0 0 260 200",
+ "surface": "ground",
+ "size": 300,
+ "params": {
+  "color": "#43a047",
+  "c2": "#ffb300"
+ },
+ "variants": [
+  "#43a047",
+  "#fb8c00",
+  "#8e24aa"
+ ],
+ "layers": [
+  {
+   "id": "sombra",
+   "svg": "<ellipse cx='130' cy='188' rx='96' ry='9' fill='#0000001f'/>"
+  },
+  {
+   "id": "cola",
+   "svg": "<path d='M60 120 Q20 130 6 100 Q30 112 62 96Z' fill='{{color}}'/><path d='M40 110 L30 96 L50 100Z M24 108 L14 96 L32 98Z' fill='{{c2}}'/>",
+   "anim": [
+    {
+     "type": "sway",
+     "amp": 9,
+     "speed": 0.8,
+     "origin": "66 112"
+    }
+   ]
+  },
+  {
+   "id": "patas",
+   "svg": "<rect x='84' y='140' width='26' height='46' rx='10' fill='{{color:dark}}'/><rect x='140' y='140' width='26' height='46' rx='10' fill='{{color:dark}}'/>",
+   "anim": [
+    {
+     "type": "slide",
+     "amp": 2,
+     "speed": 1.2
+    }
+   ]
+  },
+  {
+   "id": "cuerpo",
+   "svg": "<ellipse cx='122' cy='112' rx='72' ry='48' fill='{{color}}'/><ellipse cx='122' cy='128' rx='50' ry='28' fill='{{color:lighter}}'/><path d='M80 70 L90 50 L100 68Z M108 62 L120 40 L130 62Z M138 66 L150 46 L158 70Z' fill='{{c2}}'/>",
+   "anim": [
+    {
+     "type": "bob",
+     "amp": 3,
+     "speed": 0.7
+    }
+   ]
+  },
+  {
+   "id": "cabeza",
+   "svg": "<path d='M170 96 Q176 50 214 50 Q250 52 250 82 Q250 108 214 106 Q190 108 170 96Z' fill='{{color}}'/><circle cx='214' cy='72' r='8' fill='#fff'/><circle cx='216' cy='72' r='4' fill='#222'/><path d='M214 94 Q232 100 246 90' stroke='#7a2b2b' stroke-width='4' fill='none' stroke-linecap='round'/>",
+   "anim": [
+    {
+     "type": "bob",
+     "amp": 3,
+     "speed": 0.7
+    },
+    {
+     "type": "sway",
+     "amp": 3,
+     "speed": 0.9,
+     "origin": "175 96"
+    }
+   ]
+  }
+ ],
+ "states": {
+  "angry": {
+   "cabeza": {
+    "transform": "rotate(6 175 96)"
+   }
+  }
+ }
+}

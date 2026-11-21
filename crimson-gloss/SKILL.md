@@ -155,6 +155,24 @@ Todos los modos funcionan en las dos orientaciones. Pregunta al usuario **dónde
 - Los layouts de cuento no necesitan cambios al pasar de una orientación a otra: usan porcentajes del lienzo.
 
 ---
+## GENERADOR DE ELEMENTOS (la skill no tiene una lista cerrada)
+Cuando el guion nombra algo que no tiene dibujo (un barquito de papel, un dinosaurio, una tetera…), **lo generas por código**: un JSON declarativo con capas SVG, parámetros de color, animaciones y estados. No se ejecuta código; solo se pinta SVG saneado.
+
+**Bucle (siempre que hagas un cuento o un video con objetos):**
+1. `character.py plan work --story` escribe `work/needs_assets.json` (objetos sin dibujo). **Lee también el guion tú** y lista todo objeto o personaje visible: la heurística no lo ve todo. Mira lo que ya existe: `assets.py list work`.
+2. Por cada elemento que falte: `assets.py template work NOMBRE` y rellena el JSON en `work/assets/gen/NOMBRE.json`:
+   `name`, `aliases` (las palabras que usa el guion, en singular y variantes), `viewBox`, `surface` (`water`|`ground`|`air`), `params` (colores `#rrggbb`), `variants`, `layers` (de atrás adelante, ≤ 8 KB cada una), `states`, `state_words` (palabras del texto que activan un estado, p. ej. `{"crooked":["torcid"]}`).
+   Colores en el SVG: `{{color}}`, `{{color:light}}`, `{{color:dark}}`, `{{color:darker}}`, `{{c2}}`… Animaciones por capa: `bob slide sway spin pulse blink flap` (`amp`, `speed` en ciclos/s, `phase`, `origin`).
+   Dibuja con formas planas y sombreado con `:light/:dark`; mantén todo dentro del viewBox.
+3. `assets.py validate work/assets/gen/NOMBRE.json` (solo etiquetas g/path/circle/ellipse/rect/line/polyline/polygon/gradientes/clipPath/mask/text; sin scripts, imágenes, enlaces ni `style`) y **`assets.py preview work NOMBRE`**: abre `work/_preview/qa_2.png` y corrige proporciones y colores.
+4. Vuelve a ejecutar `plan --story`: el planificador encuentra el elemento por alias y toma del texto el **color** («barquito azul», «el barquito de Mateo» → el color de Mateo), el **estado** y el **movimiento** según `surface`.
+5. `assets.py promote work NOMBRE` lo guarda en la biblioteca de la skill (`assets_library/`) para futuros videos.
+- Uso manual: actor `{ "asset": {"name":"dinosaur","color":"#fb8c00","state":"angry"}, "x":0.5, "y":0.8, "move":"sail|walk|fly|sway" }`; tarjeta de B-roll `{ "content": {"asset":"dinosaur"} }`; objeto de `phone` `{ "object": {"asset":"dinosaur"} }`; pantalla `choose` con variantes de color; `assetsheet` para ver varios.
+- **Personajes con nombre** (palabras en mayúscula repetidas) se dibujan como niños por código; la ropa toma el color que el texto les asigne («Lucas encontró papel azul» → Lucas lleva azul). Estados: idle run jump sad laugh cheer point fold hold.
+- **No lances dos renders ni una vista previa a la vez**: comparten `~/.crimson-gloss/runtime` y se pisan (salen videos de 3 s).
+- Probado: biblioteca semilla (paper-boat, rocket, ladybug, snail, dinosaur), validación, vista previa, fotogramas del cuento. **Pendiente de repetir**: el render completo del cuento de ejemplo (se pisó con una vista previa).
+
+---
 ## CATÁLOGO DE B-ROLL (escenas `insert`)
 Un `insert` tapa al presentador 2–4 s con un fondo (`bg`: `sky` `sunset` `night` `mint` `gold` `paper` `rose`) y un **layout** que ilustra la idea. Elige el layout **por lo que se dice**, no por costumbre, y no repitas el mismo dos veces seguidas. Texto de cabecera con `lines` (`{small}` / `{gloss}` + `at`). En modo personaje, `character.py plan` los elige solo; tú puedes cambiarlos en `plan.json`.
 

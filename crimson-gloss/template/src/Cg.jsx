@@ -4,6 +4,7 @@ import { AbsoluteFill, Audio, Easing, Img, OffthreadVideo, Sequence, interpolate
 import { loadFont } from '@remotion/google-fonts/BricolageGrotesque';
 import { Character, SetWall, SetProps, SetFloor } from './Character';
 import { BrollBody, isFull } from './Broll';
+import { Assets, GenAsset, useAssets } from './Asset';
 
 const F = loadFont().fontFamily;
 export let FPS = 30; // se fija desde plan.fps en <Cg>
@@ -107,6 +108,8 @@ const Icon = ({ name }) => {
 };
 
 const CardBody = ({ c = {}, W, H }) => {
+  const assets = useAssets();
+  if (c.asset) return <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: c.bg || 'linear-gradient(160deg,#fff,#f6e9e9)' }}><GenAsset spec={assets[c.asset]} params={{ ...(c.color ? { color: c.color } : {}), ...(c.params || {}) }} state={c.state} t={useT()} size={Math.min(W, H) * 0.78} /></div>;
   if (c.image) return <Img src={staticFile(c.image)} style={{ width: '100%', height: '100%', objectFit: c.fit || 'cover', objectPosition: 'top' }} />;
   if (c.emoji) return <div style={{ width: '100%', height: '100%', display: 'grid', placeItems: 'center', background: c.bg || 'linear-gradient(160deg,#fff,#f6d6d6)', fontSize: Math.min(W, H) * 0.55 }}>{c.emoji}</div>;
   if (c.text) return <div style={{ width: '100%', height: '100%', padding: 22, background: c.bg || 'linear-gradient(160deg,#fff,#f1e2e2)', fontFamily: F, fontWeight: 800, fontStyle: 'italic', fontSize: Math.min(60, W / 4.6), lineHeight: 0.95, color: TH.accent, whiteSpace: 'pre-line', display: 'flex', alignItems: 'center' }}>{c.text}</div>;
@@ -431,6 +434,7 @@ export const Cg = ({ plan }) => {
   );
   return (
     <Dims.Provider value={{ W: CW, H: CH }}>
+    <Assets.Provider value={plan.assets || {}}>
     <AbsoluteFill style={{ background: Array.isArray(plan.bg) ? `linear-gradient(180deg, ${plan.bg[0]}, ${plan.bg[1]})` : TH.bg }}>
       <BlurMask cuts={cuts}>
         {useFit ? <DesignFit plan={plan}>{layers}</DesignFit> : layers}
@@ -445,6 +449,7 @@ export const Cg = ({ plan }) => {
       {scenes.flatMap((sc, i) => (sc.elements || []).filter((e) => e.kind === 'gloss').map((e, j) => sfx('pop.wav', e.at - 0.1, 0.3, 5, `g${i}_${j}`)))}
       {scenes.map((sc, i) => (sc.elements?.length ? sfx('click.wav', sc.elements[0].at - 0.15, 0.4, 3, 'k' + i) : null))}
     </AbsoluteFill>
+    </Assets.Provider>
     </Dims.Provider>
   );
 };

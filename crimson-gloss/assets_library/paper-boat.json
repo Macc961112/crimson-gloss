@@ -1,0 +1,72 @@
+{
+ "name": "paper-boat",
+ "aliases": [
+  "barquito",
+  "barco",
+  "barquito de papel",
+  "barco de papel",
+  "lancha",
+  "velero"
+ ],
+ "viewBox": "0 0 200 160",
+ "surface": "water",
+ "params": {
+  "color": "#e53935"
+ },
+ "variants": [
+  "#2f7de1",
+  "#e53935",
+  "#fbc02d"
+ ],
+ "layers": [
+  {
+   "id": "sombra",
+   "svg": "<ellipse cx='100' cy='148' rx='78' ry='7' fill='#0000001c'/>"
+  },
+  {
+   "id": "casco",
+   "svg": "<path d='M18 98 L182 98 L150 142 L50 142Z' fill='{{color}}'/><path d='M18 98 L182 98 L170 112 L30 112Z' fill='{{color:light}}' opacity='.5'/><path d='M50 142 L150 142' stroke='{{color:darker}}' stroke-width='3' opacity='.4'/>",
+   "anim": [
+    {
+     "type": "bob",
+     "amp": 3,
+     "speed": 0.45
+    }
+   ]
+  },
+  {
+   "id": "vela",
+   "svg": "<path d='M100 8 L168 98 L100 98Z' fill='{{color:dark}}'/><path d='M100 8 L32 98 L100 98Z' fill='{{color:light}}'/><path d='M100 8 L100 98' stroke='{{color:darker}}' stroke-width='2' opacity='.5'/>",
+   "anim": [
+    {
+     "type": "bob",
+     "amp": 3,
+     "speed": 0.45
+    },
+    {
+     "type": "sway",
+     "amp": 3,
+     "speed": 0.35,
+     "origin": "100 98"
+    }
+   ]
+  }
+ ],
+ "states": {
+  "crooked": {
+   "vela": {
+    "transform": "rotate(-9 100 98)"
+   },
+   "casco": {
+    "transform": "skewX(-9) translate(12 0)"
+   }
+  }
+ },
+ "state_words": {
+  "crooked": [
+   "torcid",
+   "chuec",
+   "deform"
+  ]
+ }
+}

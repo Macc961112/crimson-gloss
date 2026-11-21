@@ -15,6 +15,7 @@ import argparse, asyncio, json, os, re, subprocess, sys
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 from lexicon import EMOJI, STOP, ACTORS, WORLD_WORDS, actor_for, move_for, emoji_for, norm  # noqa: E402
+from storyplan import story_scenes3  # noqa: E402
 
 def run(cmd):
     r = subprocess.run(cmd, capture_output=True, text=True)
@@ -40,9 +41,22 @@ def tts(text, voice, rate, out_mp3):
                 elif ch['type'] == 'WordBoundary':
                     words.append({'w': ch['text'], 's': round(ch['offset'] / 1e7, 2), 'e': round((ch['offset'] + ch['duration']) / 1e7, 2)})
     asyncio.run(go())
-    toks = text.split()
-    if len(toks) == len(words):  # recupera la puntuación del guion (edge la quita): sirve para asentir en comas y puntos
-        for w, t in zip(words, toks): w['w'] = t
+    return align_words(text.split(), words)
+
+def align_words(toks, words):
+    """Devuelve las palabras de la voz con el texto original del guion (rayas «—», puntuación, cifras) para detectar diálogos y frases."""
+    merged, pend = [], ''
+    for t in toks:
+        if not norm(t): pend += t; continue
+        merged.append(pend + t); pend = ''
+    if len(merged) == len(words):
+        for w, t in zip(words, merged): w['w'] = t
+        return words
+    j = 0
+    for t in merged:
+        nt = norm(t)
+        for k in range(j, min(len(words), j + 4)):
+            if norm(words[k]['w']) == nt: words[k]['w'] = t; j = k + 1; break
     return words
 
 def sentences_from(words):
@@ -64,10 +78,15 @@ def cmd_init(a):
         tr = transcribe(p('audio.wav'), a.lang, a.model)
     else:
         text = open(a.script_file, encoding='utf-8').read().strip() if a.script_file else a.script
+        title = None
+        lines = [l for l in (text or '').splitlines() if l.strip()]
+        if lines and lines[0].lstrip().startswith('#'):  # «### Título» -> portada y primera frase hablada
+            title = re.sub(r'^[#\s*_]+|[*_\s]+$', '', lines[0]); text = (title + '. ' + ' '.join(lines[1:])) if len(lines) > 1 else title
+        text = re.sub(r'[*_]{1,3}', '', text or '')
         if not text: sys.exit('[crimson] dame un guion: --script "..." o --script-file guion.txt (o --audio voz.mp3)')
         text = re.sub(r'\s+', ' ', text)
         words = tts(text, a.voice, a.rate, p('voice.mp3'))
-        tr = {'language': a.lang or 'es', 'text': text, 'words': words, 'sentences': sentences_from(words)}
+        tr = {'language': a.lang or 'es', 'text': text, 'words': words, 'sentences': sentences_from(words), **({'title': title} if title else {})}
     dur = probe_dur(p('voice.mp3'))
     tr['duration'] = round(dur + 1.0, 2)
     json.dump(tr, open(p('transcript.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
@@ -436,7 +455,10 @@ def cmd_plan(a):
         if b.get('set'): a.set = b['set']
         if b.get('character'): cfg = {**b['character'], **cfg}
     if a.story:
-        scenes, dur = story_scenes(tr, dur, a.title, a.layout, not a.no_end)
+        scenes, dur, info = story_scenes3(tr, dur, work, a.title or tr.get('title'), a.layout, not a.no_end, sentences_from)
+        json.dump(info['needs'], open(os.path.join(work, 'needs_assets.json'), 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
+        print(f"[crimson] personajes con nombre: {', '.join(info['names']) or '-'} · elementos encontrados: {', '.join(info['assets_found']) or '-'}")
+        if info['needs']: print('[crimson] SIN DIBUJO (needs_assets.json): ' + ', '.join(f"{n['word']}×{n['count']}" for n in info['needs']) + '  -> genéralos como elementos (ver SKILL.md «Generador de elementos»)')
         plan = {'mode': 'cuento', 'orientation': a.orientation, 'duration': round(dur, 2), 'fps': a.fps, 'voice': 'voice.mp3', 'music': 'music.wav' if os.path.exists(os.path.join(work, 'music.wav')) else None, 'musicVolume': 0.09,
                 'theme': theme, 'speech': speech_spans(tr['words']), 'character': None, 'scenes': scenes}
         if a.captions: plan['captions'] = {'words': tr['words'], 'perLine': 3, 'activeText': '#ffffff'}

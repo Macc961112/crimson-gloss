@@ -2,6 +2,9 @@
 // globos de diálogo, página de cuento con lectura resaltada, portada, "FIN", moraleja, contar, letras, formas, mapa y magia.
 import { AbsoluteFill, Easing, interpolate } from 'remotion';
 import { Gloss, Small, useT, prog, R, F, glossFill, TH, clamp, fit, useDims } from './Cg';
+import { Kid, KID_RATIO } from './Kids';
+import { Prop, PROP_RATIO } from './Props';
+import { GenAsset, specRatio, useAssets } from './Asset';
 
 const pop = (t, at, d = 0.4) => interpolate(t, [at, at + d], [0, 1], { ...clamp, easing: Easing.out(Easing.back(1.7)) });
 const fade = (t, at, d = 0.3) => interpolate(t, [at, at + d], [0, 1], clamp);
@@ -22,15 +25,16 @@ export const WORLDS = {
   city: { sky: ['#8aa6ff', '#ffe3f0'], ground: ['#6c6c7a', '#44444f'], h: 0.7, sun: '☀️', far: ['🏙️', '🏢', '🏬'], near: ['🚗', '🌳', '🚌'], fx: 'clouds' },
   snow: { sky: ['#bfe3ff', '#f4fbff'], ground: ['#ffffff', '#d9ecfa'], h: 0.64, sun: '🌥️', far: ['🏔️', '🌲', '🌲'], near: ['⛄', '🌲', '❄️'], fx: 'snow' },
   night: { sky: ['#0d1033', '#2b2f78'], ground: ['#1d3b5a', '#10243b'], h: 0.68, sun: '🌙', far: ['🏡', '🌲', '🌲'], near: ['🌲', '🍃'], fx: 'stars' },
+  park: { sky: ['#8fd3ff', '#eaf8ff'], ground: ['#74d18a', '#3f9b4f'], h: 0.5, sun: '☀️', far: ['🌳', '🌳', '🌳', '🌳'], near: ['🌼', '🌷', '🌸', '🌼', '🌳'], nearY: [0.08, 0.2], nearScale: 0.42, fx: 'clouds' },
   candy: { sky: ['#ffc2e6', '#fff0fa'], ground: ['#ffd1ea', '#ff9fd0'], h: 0.64, sun: '🍭', far: ['🧁', '🍰', '🍭'], near: ['🍬', '🍩', '🍭'], fx: 'sparkles' },
 };
 export const WORLD_NAMES = Object.keys(WORLDS);
 
-export const World = ({ world = 'forest', W: pw, H: ph, pan = 0 }) => {
+export const World = ({ world = 'forest', W: pw, H: ph, pan = 0, stream = false }) => {
   const d = useDims(), W = pw ?? d.W, H = ph ?? d.H, t = useT(), w = WORLDS[world] || WORLDS.forest, hy = H * w.h;
   const u = H * 0.56, rep = Math.max(1, Math.round(W / u));           // en horizontal el decorado se repite a lo ancho
   const wrap = (x0, dd, size) => { const span = W + size * 2; return ((((x0 * W - t * pan * dd) % span) + span) % span) - size; };
-  const farSize = u * 0.2, nearSize = u * 0.27, night = w.fx === 'stars' || world === 'night', water = w.water, fxN = 26 * rep;
+  const farSize = u * 0.2, nearSize = u * 0.27 * (w.nearScale ?? 1), night = w.fx === 'stars' || world === 'night', water = w.water, fxN = 26 * rep;
   const far = Array.from({ length: w.far.length * rep }, (_, i) => w.far[i % w.far.length]);
   const near = Array.from({ length: w.near.length * rep }, (_, i) => w.near[i % w.near.length]);
   return (
@@ -47,8 +51,21 @@ export const World = ({ world = 'forest', W: pw, H: ph, pan = 0 }) => {
           {[0, 1, 2].map((k) => <path key={k} d={`M0 ${40 * (H / 1920 + 0.4) + k * 90 * (H / 1920 + 0.2)} ${Array.from({ length: 13 * rep }, (_, i) => `L${(i * W) / (12 * rep)} ${40 * (H / 1920 + 0.4) + k * 90 * (H / 1920 + 0.2) + 18 * Math.sin(i * 1.3 + t * 2 + k)}`).join(' ')} L${W} ${H} L0 ${H}Z`} fill={`url(#cgW${world})`} opacity={0.55 + 0.2 * k} />)}
         </svg>
         : <div style={{ position: 'absolute', left: 0, top: hy, width: W, height: H - hy, background: `linear-gradient(180deg, ${w.ground[0]}, ${w.ground[1]})` }} />}
+      {stream && (() => {
+        const y0 = hy + (H - hy) * 0.64, th = (H - hy) * 0.2, N = 14;
+        const top = Array.from({ length: N + 1 }, (_, i) => `${i ? 'L' : 'M'}${(i * W) / N} ${y0 - th / 2 + 14 * Math.sin(i * 0.9)}`).join(' ');
+        const bot = Array.from({ length: N + 1 }, (_, i) => `L${((N - i) * W) / N} ${y0 + th / 2 + 14 * Math.sin((N - i) * 0.9 + 1)}`).join(' ');
+        return (
+          <svg width={W} height={H} style={{ position: 'absolute', left: 0, top: 0 }}>
+            <defs><linearGradient id={'cgS' + world} x1="0" y1="0" x2="0" y2="1"><stop offset="0" stopColor="#7fd0ff" /><stop offset="1" stopColor="#2a8fd6" /></linearGradient></defs>
+            <path d={`${top} ${bot}Z`} fill="#2c7a3d" transform="translate(0 -10) scale(1 1.12) translate(0 -40)" opacity=".5" />
+            <path d={`${top} ${bot}Z`} fill={`url(#cgS${world})`} />
+            {Array.from({ length: 9 }, (_, i) => <path key={i} d={`M${(((i * W) / 8 + t * 70) % (W + 120)) - 60} ${y0 + Math.sin(i * 2.3) * th * 0.28} q 24 -10 48 0`} fill="none" stroke="#ffffffcc" strokeWidth="5" strokeLinecap="round" />)}
+          </svg>
+        );
+      })()}
       {w.water && w.ground && <div style={{ position: 'absolute', left: 0, top: hy + (H - hy) * 0.55, width: W, height: (H - hy) * 0.45, background: `linear-gradient(180deg, ${w.ground[0]}, ${w.ground[1]})` }} />}
-      {near.map((e, i) => <div key={'n' + i} style={{ position: 'absolute', left: wrap((i + 0.3) / near.length + R(i + 2, -0.05, 0.05), 0.7, nearSize), top: hy + (H - hy) * (0.38 + 0.18 * (i % 2)), fontSize: nearSize * (0.7 + 0.35 * R(i + 7)), lineHeight: 1 }}>{e}</div>)}
+      {near.map((e, i) => <div key={'n' + i} style={{ position: 'absolute', left: wrap((i + 0.3) / near.length + R(i + 2, -0.05, 0.05), 0.7, nearSize), top: hy + (H - hy) * (w.nearY ? w.nearY[i % 2] : 0.38 + 0.18 * (i % 2)), fontSize: nearSize * (0.7 + 0.35 * R(i + 7)), lineHeight: 1 }}>{e}</div>)}
       {w.fx === 'snow' && Array.from({ length: fxN }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, 0, W) + 30 * Math.sin(t + i), top: (((t * R(i + 3, 60, 140) + R(i + 9, 0, H)) % (H + 80)) - 40), fontSize: R(i + 5, 24, 56), opacity: 0.9 }}>❄️</div>)}
       {w.fx === 'bubbles' && Array.from({ length: fxN }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, 0, W) + 20 * Math.sin(t * 2 + i), top: H - (((t * R(i + 3, 50, 130) + R(i + 9, 0, H)) % (H + 80)) - 40), width: R(i + 5, 18, 52), height: R(i + 5, 18, 52), borderRadius: '50%', border: '4px solid #ffffffaa', background: '#ffffff33' }} />)}
       {w.fx === 'leaves' && Array.from({ length: 14 * rep }, (_, i) => <div key={i} style={{ position: 'absolute', left: R(i, 0, W) + 60 * Math.sin(t + i), top: (((t * R(i + 3, 50, 110) + R(i + 9, 0, H)) % (H + 80)) - 40), fontSize: R(i + 5, 36, 70), transform: `rotate(${t * 60 + i * 40}deg)` }}>🍃</div>)}
@@ -73,27 +90,37 @@ const Bubble = ({ text, x, y, W, at, dur = 2.6, size = 46 }) => {
 };
 
 const Actor = ({ a, W, H, S }) => {
-  const t = useT(), at = a.at ?? 0;
+  const t = useT(), at = a.at ?? 0, assets = useAssets();
   if (t < at) return null;
-  const lt = t - at, k = pop(t, at, 0.45), size = (a.size ?? 280) * S, dur = a.dur ?? 3, mv = a.move || 'none';
-  const x0 = a.x ?? 0.5, y = a.y ?? 0.72;
-  let x = x0, dy = 0, rot = 0, sx = a.flip ? -1 : 1, sc = 1;
-  const to = a.to ?? x0 + 0.35;
-  if (mv === 'walk') { const p = Math.min(1, lt / dur); x = x0 + (to - x0) * p; dy = -Math.abs(Math.sin(lt * 7)) * 22 * S * (p < 1 ? 1 : 0.2); rot = Math.sin(lt * 7) * 5 * (p < 1 ? 1 : 0.2); if (!a.flip) sx = to > x0 ? -1 : 1; }
-  else if (mv === 'bounce') dy = -Math.abs(Math.sin(lt * 5)) * 110 * S;
+  const lt = t - at, k = pop(t, at, 0.45), isKid = !!a.kid, isAsset = !!a.asset, isProp = !!a.prop || isAsset, own = isKid || isProp;     // niño y objeto se dibujan por código
+  const size = (a.size ?? (isKid ? 520 : isProp ? 260 : 280)) * S, dur = a.dur ?? 3, mv = a.move || 'none';
+  const x0 = a.x ?? 0.5, y = a.y ?? (own ? 0.8 : 0.72), ph = ((a.prop?.color || a.name || 'x').length * 1.7) % 6;
+  let x = x0, dy = 0, rot = 0, sx = a.flip ? -1 : 1, sc = 1, pose = a.pose;
+  const to = a.to ?? x0 + 0.35, goingLeft = to < x0;
+  if (mv === 'walk') { const p = Math.min(1, lt / dur); x = x0 + (to - x0) * p; dy = -Math.abs(Math.sin(lt * 7)) * 22 * S * (p < 1 ? 1 : 0.2); rot = Math.sin(lt * 7) * 5 * (p < 1 ? 1 : 0.2); if (!a.flip) sx = own ? (goingLeft ? -1 : 1) : (goingLeft ? 1 : -1); pose = pose ?? (p < 1 ? 'run' : 'idle'); }
+  else if (mv === 'sail') { const p = Math.max(0, (lt - (a.delay ?? 0)) / dur), stop = a.stopAt ?? 1, pp = Math.min(p, stop), stopped = p >= stop && stop < 1; x = x0 + (to - x0) * pp; dy = Math.sin(lt * 3 + ph) * 8 * S; rot = Math.sin(lt * 2.2 + ph) * 4 + (stopped ? Math.sin(lt * 14) * 3 : 0); }
+  else if (mv === 'bounce') { dy = -Math.abs(Math.sin(lt * 5)) * 110 * S; pose = pose ?? 'jump'; }
   else if (mv === 'float') { dy = Math.sin(lt * 1.8) * 30 * S; x = x0 + Math.sin(lt * 0.9) * 0.02; }
-  else if (mv === 'fly') { const p = Math.min(1, lt / dur); x = x0 + (to - x0) * p + Math.sin(lt * 1.1) * 0.04; dy = Math.sin(lt * 3) * 50 * S; if (!a.flip) sx = to > x0 ? -1 : 1; }
-  else if (mv === 'swim') { x = x0 + Math.sin(lt * 1.2) * 0.14; dy = Math.sin(lt * 2.4) * 28 * S; if (!a.flip) sx = Math.cos(lt * 1.2) > 0 ? -1 : 1; }
-  else if (mv === 'sway') rot = Math.sin(lt * 3) * 12;
+  else if (mv === 'fly') { const p = Math.min(1, lt / dur); x = x0 + (to - x0) * p + Math.sin(lt * 1.1) * 0.04; dy = Math.sin(lt * 3) * 50 * S; if (!a.flip) sx = own ? (goingLeft ? -1 : 1) : (goingLeft ? 1 : -1); }
+  else if (mv === 'swim') { x = x0 + Math.sin(lt * 1.2) * 0.14; dy = Math.sin(lt * 2.4) * 28 * S; if (!a.flip) sx = own ? (Math.cos(lt * 1.2) > 0 ? 1 : -1) : (Math.cos(lt * 1.2) > 0 ? -1 : 1); }
+  else if (mv === 'sway') rot = Math.sin(lt * 3) * (isKid ? 2 : 12);
   else if (mv === 'spin') rot = lt * 180;
   else if (mv === 'pulse') sc = 1 + 0.08 * Math.sin(lt * 5);
-  const ground = ['walk', 'bounce', 'none', 'sway', 'pulse'].includes(mv) && a.shadow !== false;
+  const ground = !a.noShadow && mv !== 'sail' && ['walk', 'bounce', 'none', 'sway', 'pulse'].includes(mv) && (own ? isKid : true);
+  const h = isKid ? size : isAsset ? size * specRatio(assets[a.asset.name]) : isProp ? size * (PROP_RATIO[a.prop.kind] ?? 1) : size, w = isKid ? size / KID_RATIO : size;
+  const top = own ? y * H - h + dy : y * H - size / 2 + dy;
   const bs = Math.max(34, 46 * S);
   return (
     <>
-      {ground && <div style={{ position: 'absolute', left: x * W - size * 0.38, top: y * H + size * 0.42, width: size * 0.76, height: size * 0.12, borderRadius: '50%', background: '#000', opacity: 0.18 * k * (1 + dy / 400), filter: 'blur(5px)' }} />}
-      <div style={{ position: 'absolute', left: x * W - size / 2, top: y * H - size / 2 + dy, width: size, height: size, fontSize: size * 0.9, lineHeight: `${size}px`, textAlign: 'center', transform: `scale(${k * sx * sc}, ${k * sc}) rotate(${rot}deg)`, filter: 'drop-shadow(0 12px 12px #0003)' }}>{a.emoji}</div>
-      {a.say && <Bubble text={a.say} x={x * W} y={y * H - size * 0.55 + dy - 190 * S} W={W} at={a.sayAt ?? at + 0.6} dur={a.sayDur ?? 2.6} size={bs} />}
+      {ground && <div style={{ position: 'absolute', left: x * W - (own ? w : size) * 0.4, top: y * H - (own ? 6 * S : -size * 0.42), width: (own ? w : size) * 0.8, height: size * 0.1, borderRadius: '50%', background: '#000', opacity: 0.18 * k * (1 + dy / 400), filter: 'blur(5px)' }} />}
+      {own
+        ? <div style={{ position: 'absolute', left: x * W - w / 2, top, width: w, height: h, transformOrigin: '50% 100%', transform: `scale(${k * sx * sc}, ${k * sc}) rotate(${rot}deg)`, filter: 'drop-shadow(0 10px 8px #0003)' }}>
+          {isKid ? <Kid cfg={a.kid} mode={pose || 'idle'} t={lt} size={size} /> : isAsset ? <GenAsset spec={assets[a.asset.name]} params={{ ...(a.asset.color ? { color: a.asset.color } : {}), ...(a.asset.params || {}) }} state={a.asset.state} t={lt} size={size} /> : <Prop kind={a.prop.kind} color={a.prop.color} state={a.prop.state} t={lt} size={size} />}
+        </div>
+        : <div style={{ position: 'absolute', left: x * W - size / 2, top, width: size, height: size, fontSize: size * 0.9, lineHeight: `${size}px`, textAlign: 'center', transform: `scale(${k * sx * sc}, ${k * sc}) rotate(${rot}deg)`, filter: 'drop-shadow(0 12px 12px #0003)' }}>{a.emoji}</div>}
+      {a.holding && <div style={{ position: 'absolute', left: x * W - size * 0.22, top: top + h * 0.5, width: size * 0.44, transform: `scale(${k})`, pointerEvents: 'none' }}>{a.holding.asset ? <GenAsset spec={assets[a.holding.asset]} params={{ ...(a.holding.color ? { color: a.holding.color } : {}) }} state={a.holding.state} t={lt} size={size * 0.44} /> : <Prop kind={a.holding.kind} color={a.holding.color} state={a.holding.state} t={lt} size={size * 0.44} />}</div>}
+      {a.name && <div style={{ position: 'absolute', left: x * W - 110, top: y * H + 10 * S, width: 220, textAlign: 'center', opacity: k }}><span style={{ ...txt(Math.max(30, 40 * S), '#fff', 800), background: a.kid?.shirt || '#3a2a1a', padding: '2px 22px 4px', borderRadius: 30, border: '4px solid #fff', boxShadow: '0 6px 10px #0003' }}>{a.name}</span></div>}
+      {a.say && <Bubble text={a.say} x={x * W} y={own ? top - 170 * S : y * H - size * 0.55 + dy - 190 * S} W={W} at={a.sayAt ?? at + 0.6} dur={a.sayDur ?? 2.6} size={bs} />}
     </>
   );
 };
@@ -111,7 +138,7 @@ const Scene = ({ sc, s }) => {
   const c = sc.scene || {};
   return (
     <AbsoluteFill>
-      <World world={c.world} pan={c.pan ?? 0} />
+      <World world={c.world} pan={c.pan ?? 0} stream={c.stream} />
       <Actors actors={c.actors} />
       <Caption text={c.caption} at={s + 0.3} to={sc.to} />
     </AbsoluteFill>
@@ -142,7 +169,7 @@ const Storybook = ({ sc, s }) => {
   return (
     <AbsoluteFill style={{ background: 'radial-gradient(circle at 50% 40%, #fff3d6, #f0d9a8)' }}>
       <div style={{ position: 'absolute', left: px, top: py, width: PW, height: PH, borderRadius: 44 * (land ? 0.8 : 1), border: `${land ? 12 : 14}px solid #8a5a2b`, overflow: 'hidden', boxShadow: '0 24px 40px #0005', transform: `scale(${k}) rotate(${(1 - k) * -4}deg)`, background: '#000' }}>
-        <World world={c.world} W={PW} H={PH} pan={c.pan ?? 0} />
+        <World world={c.world} W={PW} H={PH} pan={c.pan ?? 0} stream={c.stream} />
         <Actors actors={c.actors} W={PW} H={PH} S={land ? PH / 820 : 1} />
       </div>
       <div style={{ position: 'absolute', left: tx, width: tw, top: land ? 0 : ty, bottom: land ? 0 : undefined, display: 'flex', alignItems: land ? 'center' : 'flex-start', opacity: fade(t, s + 0.3) }}><div style={{ width: '100%' }}><ReadAlong text={c.text} words={sc.words} from={s + 0.3} to={sc.to - 0.2} size={fs} /></div></div>
@@ -331,5 +358,52 @@ const Magic = ({ sc, s }) => {
   );
 };
 
-export const STORY_LAYOUTS = { scene: Scene, storybook: Storybook, title: Title, theend: TheEnd, moral: Moral, speech: Speech, counting: Counting, letter: Letter, shapes: Shapes, journey: Journey, magic: Magic };
-export const FULL_LAYOUTS = ['scene', 'storybook', 'title', 'theend', 'moral', 'speech', 'counting', 'letter', 'shapes', 'journey', 'magic'];
+
+// --- choose: «¿qué color elegirías?» con los objetos generados por código ------------------------------------------------------------
+const Choose = ({ sc, s }) => {
+  const t = useT(), c = sc.choose || {}, items = c.items || [], { W, H, U, land } = dims(), assets = useAssets();
+  const sz = Math.min(land ? 380 : 330, (W - 120) / Math.max(1, items.length) - 40);
+  return (
+    <AbsoluteFill>
+      <World world={c.world || 'park'} stream={c.stream} />
+      <AbsoluteFill style={{ background: '#0003' }} />
+      <div style={{ position: 'absolute', top: H * (land ? 0.1 : 0.12), left: '6%', right: '6%', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 * U }}>
+        {(c.text || '¿Cuál eliges?').split(/(?<=\?)\s+/).map((l, i) => <Gloss key={i} text={l} at={s + 0.3 + i * 0.3} size={fit(l, W * 0.88, land ? 130 : 150)} bright />)}
+      </div>
+      <div style={{ position: 'absolute', left: 0, right: 0, top: H * (land ? 0.42 : 0.44), display: 'flex', justifyContent: 'center', gap: 30 }}>
+        {items.map((it, i) => { const k = pop(t, s + 0.8 + i * 0.3, 0.5), bob = Math.abs(Math.sin(t * 3 + i * 1.3)) * 26 * U; return (
+          <div key={i} style={{ textAlign: 'center', transform: `translateY(${-bob}px) scale(${k})` }}>
+            <div style={{ background: '#ffffffcc', borderRadius: 40, padding: 22, border: `8px solid ${it.color}`, boxShadow: '0 16px 24px #0004' }}>{it.asset ? <GenAsset spec={assets[it.asset]} params={{ color: it.color, ...(it.params || {}) }} t={t} size={sz * 0.8} /> : <Prop kind={it.kind || 'paperBoat'} color={it.color} size={sz * 0.8} t={t} />}</div>
+            {it.label && <div style={{ ...txt(Math.max(34, 54 * U * 1.1), '#fff', 800), textShadow: '0 4px 0 #0007', marginTop: 12 }}>{it.label}</div>}
+          </div>); })}
+      </div>
+    </AbsoluteFill>
+  );
+};
+
+// --- assetsheet: vista previa de los elementos generados (nombre, animación y variantes de color) ----------------------------------------------
+const AssetSheet = ({ sc, s }) => {
+  const t = useT(), assets = useAssets(), c = sc.assetsheet || {}, names = c.names || Object.keys(assets), { W, H, land } = dims();
+  const cols = land ? Math.min(4, names.length) : Math.min(2, names.length), rows = Math.ceil(names.length / cols);
+  const cw = (W - 60) / cols, ch = Math.min(cw * 1.15, (H - 60) / rows);
+  return (
+    <AbsoluteFill style={{ background: 'linear-gradient(180deg, #f4f1ff, #e6f4ff)' }}>
+      {names.map((n, i) => {
+        const spec = assets[n], cx = 30 + (i % cols) * cw, cy = 30 + Math.floor(i / cols) * ch, k = pop(t, s + 0.1 + i * 0.15, 0.4);
+        const cols2 = (c.colors || spec?.variants || []).slice(0, 3);
+        return (
+          <div key={i} style={{ position: 'absolute', left: cx, top: cy, width: cw - 20, height: ch - 20, background: '#fff', borderRadius: 28, border: '5px solid #cfc8ee', boxShadow: '0 10px 20px #0002', transform: `scale(${k})`, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+              <GenAsset spec={spec} t={t} size={Math.min(cw * 0.34, ch * 0.42)} />
+              {cols2.map((cc, j) => <GenAsset key={j} spec={spec} params={{ color: cc }} t={t + j} size={Math.min(cw * 0.15, ch * 0.2)} />)}
+            </div>
+            <div style={{ ...txt(Math.max(26, ch * 0.075), '#3a2a1a', 800) }}>{n}</div>
+          </div>
+        );
+      })}
+    </AbsoluteFill>
+  );
+};
+
+export const STORY_LAYOUTS = { assetsheet: AssetSheet, choose: Choose, scene: Scene, storybook: Storybook, title: Title, theend: TheEnd, moral: Moral, speech: Speech, counting: Counting, letter: Letter, shapes: Shapes, journey: Journey, magic: Magic };
+export const FULL_LAYOUTS = ['assetsheet', 'choose', 'scene', 'storybook', 'title', 'theend', 'moral', 'speech', 'counting', 'letter', 'shapes', 'journey', 'magic'];

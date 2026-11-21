@@ -1,0 +1,52 @@
+{
+ "name": "ladybug",
+ "aliases": [
+  "mariquita",
+  "catarina",
+  "escarabajo"
+ ],
+ "viewBox": "0 0 160 140",
+ "surface": "ground",
+ "params": {
+  "color": "#e53935"
+ },
+ "variants": [
+  "#e53935",
+  "#fb8c00",
+  "#fbc02d"
+ ],
+ "layers": [
+  {
+   "id": "sombra",
+   "svg": "<ellipse cx='80' cy='128' rx='56' ry='6' fill='#0000001c'/>"
+  },
+  {
+   "id": "patas",
+   "svg": "<path d='M36 96 L12 112 M44 112 L28 132 M124 96 L148 112 M116 112 L132 132 M80 118 L80 130' stroke='#222' stroke-width='6' stroke-linecap='round'/>",
+   "anim": [
+    {
+     "type": "slide",
+     "amp": 2,
+     "speed": 3
+    }
+   ]
+  },
+  {
+   "id": "cuerpo",
+   "svg": "<ellipse cx='80' cy='86' rx='58' ry='40' fill='{{color}}'/><path d='M80 46 L80 126' stroke='#222' stroke-width='4'/><circle cx='56' cy='78' r='9' fill='#222'/><circle cx='104' cy='78' r='9' fill='#222'/><circle cx='64' cy='104' r='7' fill='#222'/><circle cx='96' cy='104' r='7' fill='#222'/>"
+  },
+  {
+   "id": "cabeza",
+   "svg": "<circle cx='80' cy='46' r='22' fill='#222'/><circle cx='72' cy='42' r='5' fill='#fff'/><circle cx='88' cy='42' r='5' fill='#fff'/><path d='M70 28 Q60 8 48 10 M90 28 Q100 8 112 10' stroke='#222' stroke-width='4' fill='none' stroke-linecap='round'/>",
+   "anim": [
+    {
+     "type": "sway",
+     "amp": 4,
+     "speed": 1.2,
+     "origin": "80 70"
+    }
+   ]
+  }
+ ],
+ "states": {}
+}

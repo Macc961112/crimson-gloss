@@ -6,7 +6,7 @@
 Instala la plantilla Remotion una sola vez en ~/.crimson-gloss/runtime (ruta corta: Windows limita a 260 caracteres).
 --still 1.2 3.5  renderiza solo esos fotogramas a WORKDIR/qa_*.png (para revisar antes del render completo).
 """
-import argparse, hashlib, json, os, shutil, subprocess, sys
+import argparse, hashlib, json, os, re, shutil, subprocess, sys
 
 SKILL = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 RUNTIME = os.path.join(os.path.expanduser('~'), '.crimson-gloss', 'runtime')
@@ -42,6 +42,28 @@ def install_runtime():
         print('[crimson] instalando Remotion (solo la primera vez, ~1-2 min)...')
         sh('npm install --no-audit --no-fund', RUNTIME)
 
+def load_assets(work):
+    """Elementos disponibles: biblioteca de la skill + los generados en este proyecto (work/assets/gen/*.json)."""
+    out = {}
+    for d in (os.path.join(SKILL, 'assets_library'), os.path.join(work, 'assets', 'gen')):
+        if os.path.isdir(d):
+            for f in sorted(os.listdir(d)):
+                if f.endswith('.json'):
+                    try:
+                        spec = json.load(open(os.path.join(d, f), encoding='utf-8'))
+                        out[spec.get('name') or f[:-5]] = spec
+                    except Exception as e:
+                        print(f'[crimson] aviso: {f} no es JSON válido ({e})')
+    return out
+
+def embed_assets(plan, work):
+    avail = load_assets(work)
+    txt = json.dumps(plan, ensure_ascii=False)
+    used = {n: sp for n, sp in avail.items() if f'"{n}"' in txt}
+    if used: plan['assets'] = {**used, **plan.get('assets', {})}
+    missing = sorted(set(re.findall(r'"asset": \{"name": "([^"]+)"', txt)) - set(plan.get('assets', {})))
+    if missing: sys.exit('[crimson] faltan elementos generados: ' + ', '.join(missing) + '  (créalos en work/assets/gen/NOMBRE.json; ver SKILL.md «Generador de elementos»)')
+
 def prefix_media(o):
     """Las rutas de medios del plan son relativas a WORKDIR; en el runtime viven en public/media/."""
     if isinstance(o, dict):
@@ -52,7 +74,7 @@ def prefix_media(o):
 
 LAYOUTS = ('phone stat chart steps checklist compare quote chat browser terminal grid meter rain notifs rating image clip '
            'split timeline headline polaroids price callout progress countdown reaction '
-           'scene storybook title theend moral speech counting letter shapes journey magic').split()
+           'scene storybook title theend moral speech counting letter shapes journey magic choose assetsheet').split()
 
 def validate(plan, work):
     errs = []
@@ -181,6 +203,7 @@ def main():
     plan = json.load(open(os.path.join(work, a.plan), encoding='utf-8'))
     if 'bg' not in plan and os.path.exists(os.path.join(work, 'prepare.json')):  # degradado real del estudio
         plan['bg'] = json.load(open(os.path.join(work, 'prepare.json'))).get('bg')
+    embed_assets(plan, work)
     validate(plan, work)
     if a.fps: plan['fps'] = a.fps
     if a.orientation: plan['orientation'] = a.orientation

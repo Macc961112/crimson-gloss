@@ -2,6 +2,7 @@
 // Se elige con `layout` en la escena: phone, stat, chart, steps, checklist, compare, quote, chat, browser,
 // terminal, grid, meter, rain, notifs, rating, image, clip.
 import { AbsoluteFill, Easing, Img, OffthreadVideo, interpolate, staticFile } from 'remotion';
+import { GenAsset, useAssets } from './Asset';
 import { Gloss, Small, useT, prog, R, fit, F, glossFill, TH, stickerOutline, clamp, FPS, Dims, useDims } from './Cg';
 import { STORY_LAYOUTS, FULL_LAYOUTS } from './Story';
 import { GENERAL_LAYOUTS } from './General';
@@ -30,7 +31,7 @@ const Header = ({ sc }) => {
 
 // --- phone: marco de móvil + objeto grande (el original) ---------------------------------
 const Phone = ({ sc, s }) => {
-  const t = useT();
+  const t = useT(), assets = useAssets();
   const p = prog(t, s, s + 0.4), phoneIn = prog(t, s + 0.1, s + 0.55);
   const obj = sc.object || {}, bob = Math.sin(t * 2.2) * 10, lines = sc.lines || [];
   return (
@@ -39,7 +40,7 @@ const Phone = ({ sc, s }) => {
         <div style={{ position: 'absolute', left: 330, top: 28, width: 140, height: 34, borderRadius: 18, background: TH.accent }} />
       </div>
       <div style={{ position: 'absolute', left: 0, right: 0, top: 1000, display: 'flex', justifyContent: 'center', transform: `translateY(${(1 - p) * 500 + bob}px) scale(${0.9 + p * 0.1})`, filter: 'drop-shadow(0 30px 30px #0003)' }}>
-        {obj.image ? <Img src={staticFile(obj.image)} style={{ height: 760, objectFit: 'contain' }} /> : <div style={{ fontSize: 560, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
+        {obj.asset ? <GenAsset spec={assets[obj.asset]} params={{ ...(obj.color ? { color: obj.color } : {}) }} state={obj.state} t={t} size={640} /> : obj.image ? <Img src={staticFile(obj.image)} style={{ height: 760, objectFit: 'contain' }} /> : <div style={{ fontSize: 560, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
       </div>
       {(sc.stickers || []).map((e, i) => <div key={i} style={{ position: 'absolute', left: [40, 800, 80, 810][i % 4], top: [1060, 1100, 1500, 1480][i % 4], fontSize: 150, textShadow: stickerOutline, transform: `translate(${Math.sin(t * 2 + i) * 10}px, ${Math.cos(t * 2.4 + i) * 12}px) rotate(${-8 + i * 9 + Math.sin(t * 3) * 4}deg)`, opacity: phoneIn }}>{e}</div>)}
       <div style={{ position: 'absolute', top: 400, width: 800, left: 140, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 14 }}>
@@ -368,12 +369,13 @@ const HeaderLand = ({ sc, w }) => {
 
 // phone en horizontal: objeto grande a la derecha, texto a la izquierda
 const PhoneLand = ({ sc, s, colW }) => {
+  const assets = useAssets();
   const t = useT(), { W, H } = useDims(), p = prog(t, s, s + 0.4), obj = sc.object || {}, bob = Math.sin(t * 2.2) * 12;
   return (
     <>
       <HeaderLand sc={sc} w={colW - 120} />
       <div style={{ position: 'absolute', left: colW, width: colW, top: 0, bottom: 0, display: 'grid', placeItems: 'center', transform: `translateY(${(1 - p) * 300 + bob}px) scale(${0.9 + p * 0.1})`, filter: 'drop-shadow(0 30px 30px #0003)' }}>
-        {obj.image ? <Img src={staticFile(obj.image)} style={{ height: H * 0.78, objectFit: 'contain' }} /> : <div style={{ fontSize: H * 0.62, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
+        {obj.asset ? <GenAsset spec={assets[obj.asset]} params={{ ...(obj.color ? { color: obj.color } : {}) }} state={obj.state} t={t} size={H * 0.7} /> : obj.image ? <Img src={staticFile(obj.image)} style={{ height: H * 0.78, objectFit: 'contain' }} /> : <div style={{ fontSize: H * 0.62, lineHeight: 1 }}>{obj.emoji || '✨'}</div>}
       </div>
       {(sc.stickers || []).map((e, i) => <div key={i} style={{ position: 'absolute', left: colW + [0.06, 0.78, 0.1, 0.8][i % 4] * colW, top: [0.62, 0.12, 0.08, 0.66][i % 4] * H, fontSize: H * 0.14, textShadow: stickerOutline, transform: `translate(${Math.sin(t * 2 + i) * 10}px, ${Math.cos(t * 2.4 + i) * 12}px) rotate(${-8 + i * 9 + Math.sin(t * 3) * 4}deg)`, opacity: p }}>{e}</div>)}
     </>
